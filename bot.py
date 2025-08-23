@@ -50,12 +50,17 @@ class Bot(Client):
             # Initialize database connection in async context
             try:
                 from database.db import db
-                await db.initialize()
-                logger.info("Database connection verified")
-                print("💾 Database: Connected")
+                db_success = await db.initialize()
+                if db_success:
+                    logger.info("Database connection verified")
+                    print("💾 Database: Connected")
+                else:
+                    logger.warning("Database connection failed - running in limited mode")
+                    print("⚠️ Database: Not connected (bot will run with limited features)")
             except Exception as db_error:
                 logger.warning(f"Database connection warning: {db_error}")
                 print(f"⚠️ Database Warning: {db_error}")
+                print("ℹ️ Bot will run in limited mode without database features")
                 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
@@ -76,8 +81,9 @@ async def main():
     retry_count = 0
     
     while retry_count < max_retries:
-        bot = Bot()
+        bot = None
         try:
+            bot = Bot()
             await bot.start()
             logger.info("Bot is running and ready to receive messages")
             
@@ -106,10 +112,11 @@ async def main():
                 logger.error("Max retries reached. Bot shutting down.")
                 
         finally:
-            try:
-                await bot.stop()
-            except:
-                pass
+            if bot:
+                try:
+                    await bot.stop()
+                except Exception as stop_error:
+                    logger.error(f"Error during bot stop: {stop_error}")
 
 if __name__ == "__main__":
     try:
