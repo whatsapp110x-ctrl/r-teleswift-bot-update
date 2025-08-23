@@ -4,17 +4,17 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 # Your API ID from my.telegram.org
-API_ID = int(os.environ.get("API_ID", "12345"))
+API_ID = int(os.environ.get("API_ID", ""))
 
 # Your API Hash from my.telegram.org
 API_HASH = os.environ.get("API_HASH", "")
 
 # Your database URI from mongodb
 # If not provided, bot will run in limited mode
-DB_URI = os.environ.get("DATABASE_URL", "mongodb://localhost:27017")
+DB_URI = os.environ.get("DATABASE_URL", "")
 
 # Your database name
-DB_NAME = os.environ.get("DATABASE_NAME", "techvj_bot")
+DB_NAME = os.environ.get("DATABASE_NAME", "RTeleSwift")
 
 # Bot workers - number of concurrent workers for handling updates
 BOT_WORKERS = int(os.environ.get("BOT_WORKERS", "4"))
