@@ -32,31 +32,32 @@ logging.getLogger("pyrogram.session.session").setLevel(logging.WARNING)
 class Bot(Client):
     def __init__(self):
         super().__init__(
-            "techvj_save_bot",
+            "r_teleswift_bot",
             api_id=API_ID,
             api_hash=API_HASH,
             bot_token=BOT_TOKEN,
             plugins=dict(root="TechVJ"),
             workers=BOT_WORKERS,
             sleep_threshold=SLEEP_THRESHOLD,
-            max_concurrent_transmissions=10
+            max_concurrent_transmissions=15  # Increased for better speed
         )
         self.start_time = datetime.utcnow()
-        logger.info("Bot instance created successfully")
+        logger.info("R-TeleSwiftBot💖 instance created successfully")
 
     async def start(self):
         try:
             await super().start()
             bot_info = await self.get_me()
-            logger.info(f"Bot Started Successfully! @{bot_info.username}")
-            print(f"🤖 Bot Started: @{bot_info.username}")
-            print("🔥 Powered By @VJ_Botz")
+            logger.info(f"R-TeleSwiftBot💖 Started Successfully! @{bot_info.username}")
+            print(f"🤖 R-TeleSwiftBot💖 Started: @{bot_info.username}")
+            print("💖 Powered By R-TeleSwiftBot")
+            print("🚀 Ultra High Speed Mode Activated")
             
             # Initialize database connection - non-blocking
             asyncio.create_task(self._init_database())
                 
         except Exception as e:
-            logger.error(f"Failed to start bot: {e}")
+            logger.error(f"Failed to start R-TeleSwiftBot💖: {e}")
             print(f"❌ Bot Start Error: {e}")
             raise
 
@@ -79,8 +80,8 @@ class Bot(Client):
     async def stop(self, *args):
         try:
             await super().stop()
-            logger.info("Bot stopped successfully")
-            print("👋 Bot Stopped - Goodbye!")
+            logger.info("R-TeleSwiftBot💖 stopped successfully")
+            print("👋 R-TeleSwiftBot💖 Stopped - Goodbye!")
         except Exception as e:
             logger.error(f"Error stopping bot: {e}")
 
@@ -88,16 +89,16 @@ async def main():
     """Enhanced main function with better error handling"""
     bot = None
     try:
-        logger.info("Starting VJ Save Restricted Content Bot")
+        logger.info("Starting R-TeleSwiftBot💖 - Ultra High Speed Edition")
         bot = Bot()
         await bot.start()
-        logger.info("Bot is running and ready to receive messages")
+        logger.info("R-TeleSwiftBot💖 is running and ready to receive messages")
         
         # Keep the bot running without excessive operations
         await asyncio.Event().wait()
         
     except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
+        logger.info("R-TeleSwiftBot💖 stopped by user")
     except Exception as e:
         logger.error(f"Bot error: {e}")
         # Don't re-raise, just log and exit gracefully
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n🛑 Bot stopped by user")
+        print("\n🛑 R-TeleSwiftBot💖 stopped by user")
     except Exception as e:
         logger.error(f"Fatal Error: {e}")
         print(f"💥 Fatal Error: {e}")
