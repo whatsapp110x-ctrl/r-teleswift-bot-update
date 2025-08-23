@@ -34,7 +34,8 @@ class Bot(Client):
             bot_token=BOT_TOKEN,
             plugins=dict(root="TechVJ"),
             workers=BOT_WORKERS,
-            sleep_threshold=SLEEP_THRESHOLD
+            sleep_threshold=SLEEP_THRESHOLD,
+            max_concurrent_transmissions=10
         )
         self.start_time = datetime.utcnow()
         logger.info("Bot instance created successfully")
@@ -45,27 +46,30 @@ class Bot(Client):
             bot_info = await self.get_me()
             logger.info(f"Bot Started Successfully! @{bot_info.username}")
             print(f"🤖 Bot Started: @{bot_info.username}")
-            print("🔥 Powered By @Ashish")
+            print("🔥 Powered By @VJ_Botz")
             
-            # Initialize database connection in async context
-            try:
-                from database.db import db
-                db_success = await db.initialize()
-                if db_success:
-                    logger.info("Database connection verified")
-                    print("💾 Database: Connected")
-                else:
-                    logger.warning("Database connection failed - running in limited mode")
-                    print("⚠️ Database: Not connected (bot will run with limited features)")
-            except Exception as db_error:
-                logger.warning(f"Database connection warning: {db_error}")
-                print(f"⚠️ Database Warning: {db_error}")
-                print("ℹ️ Bot will run in limited mode without database features")
+            # Initialize database connection - non-blocking
+            asyncio.create_task(self._init_database())
                 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
             print(f"❌ Bot Start Error: {e}")
             raise
+
+    async def _init_database(self):
+        """Initialize database in background to avoid blocking bot startup"""
+        try:
+            from database.db import db
+            db_success = await db.initialize()
+            if db_success:
+                logger.info("Database connection established")
+                print("💾 Database: Connected")
+            else:
+                logger.warning("Database connection failed - using fallback mode")
+                print("⚠️ Database: Using fallback mode")
+        except Exception as db_error:
+            logger.warning(f"Database initialization warning: {db_error}")
+            print(f"⚠️ Database: Fallback mode active")
 
     async def stop(self, *args):
         try:
@@ -76,47 +80,27 @@ class Bot(Client):
             logger.error(f"Error stopping bot: {e}")
 
 async def main():
-    """Main function with enhanced auto-restart capability"""
-    max_retries = 10
-    retry_count = 0
-    
-    while retry_count < max_retries:
-        bot = None
-        try:
-            bot = Bot()
-            await bot.start()
-            logger.info("Bot is running and ready to receive messages")
-            
-            # Keep the bot running with periodic health checks
-            while True:
-                try:
-                    # Check if bot is still connected every 60 seconds
-                    await bot.get_me()
-                    await asyncio.sleep(60)
-                except Exception as health_error:
-                    logger.error(f"Bot health check failed: {health_error}")
-                    break
-            
-        except KeyboardInterrupt:
-            logger.info("Bot stopped by user")
-            break
-        except Exception as e:
-            retry_count += 1
-            logger.error(f"Bot crashed (attempt {retry_count}/{max_retries}): {e}")
-            
-            if retry_count < max_retries:
-                wait_time = min(300, 30 * retry_count)  # Exponential backoff, max 5 minutes
-                logger.info(f"Restarting in {wait_time} seconds...")
-                await asyncio.sleep(wait_time)
-            else:
-                logger.error("Max retries reached. Bot shutting down.")
-                
-        finally:
-            if bot:
-                try:
-                    await bot.stop()
-                except Exception as stop_error:
-                    logger.error(f"Error during bot stop: {stop_error}")
+    """Optimized main function"""
+    bot = None
+    try:
+        bot = Bot()
+        await bot.start()
+        logger.info("Bot is running and ready to receive messages")
+        
+        # Keep the bot running without excessive health checks
+        await asyncio.Event().wait()
+        
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Bot error: {e}")
+        
+    finally:
+        if bot:
+            try:
+                await bot.stop()
+            except Exception as stop_error:
+                logger.error(f"Error during bot stop: {stop_error}")
 
 if __name__ == "__main__":
     try:
