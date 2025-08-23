@@ -1,6 +1,9 @@
 import os
 from flask import Flask, jsonify
 import logging
+import threading
+import time
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -10,43 +13,52 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "vj_save_bot_secret_key_2024")
 
+# Keep-alive tracking
+last_activity = datetime.utcnow()
+
+def update_activity():
+    """Update last activity timestamp"""
+    global last_activity
+    last_activity = datetime.utcnow()
+
 @app.route('/')
 def index():
     """Main health check endpoint"""
+    update_activity()
     return {
         'status': 'healthy',
-        'service': 'VJ Save Restricted Content Bot',
-        'message': 'VJ Save Restricted Content Bot is Running! 🤖',
-        'version': '1.0.0'
+        'service': 'R-TeleSwiftBot💖',
+        'message': 'R-TeleSwiftBot💖 is Running! 🤖',
+        'version': '1.0.0',
+        'uptime': str(datetime.utcnow() - last_activity)
     }
 
 @app.route('/health')
 def health_check():
     """Detailed health check endpoint"""
     try:
+        update_activity()
+        
         # Test database connection
         try:
             from database.db import db
-            # Simple connection test
             health_status = {
                 'status': 'healthy',
-                'service': 'vj_save_bot',
+                'service': 'r_teleswift_bot',
                 'database': 'connected',
-                'timestamp': None
+                'last_activity': last_activity.isoformat(),
+                'timestamp': datetime.utcnow().isoformat()
             }
         except Exception as db_error:
             logger.warning(f"Database health check failed: {db_error}")
             health_status = {
                 'status': 'degraded',
-                'service': 'vj_save_bot',
+                'service': 'r_teleswift_bot',
                 'database': 'disconnected',
                 'error': str(db_error),
-                'timestamp': None
+                'last_activity': last_activity.isoformat(),
+                'timestamp': datetime.utcnow().isoformat()
             }
-        
-        # Add timestamp
-        from datetime import datetime
-        health_status['timestamp'] = datetime.utcnow().isoformat()
         
         return jsonify(health_status)
         
@@ -54,7 +66,7 @@ def health_check():
         logger.error(f"Health check error: {e}")
         return jsonify({
             'status': 'unhealthy',
-            'service': 'vj_save_bot',
+            'service': 'r_teleswift_bot',
             'error': str(e)
         }), 500
 
@@ -62,9 +74,9 @@ def health_check():
 def status():
     """Bot status endpoint"""
     try:
-        from datetime import datetime
+        update_activity()
         return jsonify({
-            'bot_name': 'VJ Save Restricted Content Bot',
+            'bot_name': 'R-TeleSwiftBot💖',
             'status': 'running',
             'uptime': 'online',
             'last_check': datetime.utcnow().isoformat(),
@@ -81,20 +93,36 @@ def status():
 
 @app.route('/ping')
 def ping():
-    """Simple ping endpoint"""
-    return jsonify({'pong': True, 'service': 'vj_save_bot'})
+    """Simple ping endpoint to keep service awake"""
+    update_activity()
+    return jsonify({
+        'pong': True, 
+        'service': 'r_teleswift_bot', 
+        'time': datetime.utcnow().isoformat()
+    })
+
+@app.route('/keep-alive')
+def keep_alive():
+    """Keep-alive endpoint"""
+    update_activity()
+    return jsonify({
+        'alive': True, 
+        'service': 'r_teleswift_bot',
+        'last_activity': last_activity.isoformat()
+    })
 
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""
     return jsonify({
         'error': 'Endpoint not found',
-        'message': 'VJ Save Restricted Content Bot API',
+        'message': 'R-TeleSwiftBot💖 API',
         'available_endpoints': [
             '/',
             '/health',
             '/status',
-            '/ping'
+            '/ping',
+            '/keep-alive'
         ]
     }), 404
 
@@ -106,6 +134,20 @@ def internal_error(error):
         'error': 'Internal server error',
         'message': 'Something went wrong with the bot service'
     }), 500
+
+# Auto keep-alive function
+def auto_keep_alive():
+    """Send periodic requests to keep service awake"""
+    while True:
+        try:
+            time.sleep(300)  # 5 minutes
+            update_activity()
+            logger.info("Keep-alive ping sent")
+        except Exception as e:
+            logger.error(f"Keep-alive error: {e}")
+
+# Start keep-alive thread
+threading.Thread(target=auto_keep_alive, daemon=True).start()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
