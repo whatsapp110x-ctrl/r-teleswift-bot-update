@@ -48,6 +48,31 @@ HELP_TXT = """<b>📖 ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅs
 
 ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: @VJ_Botz</b>"""
 
+# Login help text
+LOGIN_HELP = """<b>🔐 ʟᴏɢɪɴ ʜᴇʟᴘ
+
+ᴛᴏ ᴜsᴇ ᴛʜɪs ʙᴏᴛ, ʏᴏᴜ ɴᴇᴇᴅ ᴛᴏ ʟᴏɢɪɴ ᴡɪᴛʜ ʏᴏᴜʀ ᴛᴇʟᴇɢʀᴀᴍ ᴀᴄᴄᴏᴜɴᴛ:
+
+📱 **sᴛᴇᴘs:**
+1. sᴇɴᴅ /login ᴄᴏᴍᴍᴀɴᴅ
+2. ᴇɴᴛᴇʀ ʏᴏᴜʀ ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀ (+1234567890)
+3. ᴇɴᴛᴇʀ ᴏᴛᴘ ʀᴇᴄᴇɪᴠᴇᴅ ᴏɴ ᴛᴇʟᴇɢʀᴀᴍ
+4. ɪғ ʀᴇǫᴜɪʀᴇᴅ, ᴇɴᴛᴇʀ 2ғᴀ ᴘᴀssᴡᴏʀᴅ
+
+🔒 **sᴇᴄᴜʀɪᴛʏ:**
+• ʏᴏᴜʀ sᴇssɪᴏɴ ɪs sᴛᴏʀᴇᴅ sᴇᴄᴜʀᴇʟʏ
+• ɴᴏ ᴘᴀssᴡᴏʀᴅs ᴀʀᴇ sᴛᴏʀᴇᴅ
+• ᴜsᴇ /logout ᴛᴏ ʀᴇᴍᴏᴠᴇ sᴇssɪᴏɴ
+
+ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: @VJ_Botz</b>"""
+
+# Logout message
+LOGOUT_TXT = """<b>👋 ʟᴏɢᴏᴜᴛ sᴜᴄᴄᴇssғᴜʟ!
+
+ʏᴏᴜʀ sᴇssɪᴏɴ ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ ғʀᴏᴍ ᴏᴜʀ sᴇʀᴠᴇʀs.
+
+ᴛᴏ ᴜsᴇ ᴛʜᴇ ʙᴏᴛ ᴀɢᴀɪɴ, ᴜsᴇ /login ᴄᴏᴍᴍᴀɴᴅ.</b>"""
+
 # Error messages dictionary
 ERROR_MESSAGES = {
     'not_logged_in': """❌ **You're not logged in!**
@@ -121,6 +146,165 @@ An unexpected error happened. Please try again.
 
 If the issue persists, contact: @VJ_Botz"""
 }
+
+# Login process messages
+LOGIN_START = """<b>🔐 ʟᴏɢɪɴ ᴘʀᴏᴄᴇss sᴛᴀʀᴛᴇᴅ
+
+ᴇɴᴛᴇʀ ʏᴏᴜʀ ᴛᴇʟᴇɢʀᴀᴍ ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀ ɪɴ ɪɴᴛᴇʀɴᴀᴛɪᴏɴᴀʟ ғᴏʀᴍᴀᴛ:
+
+ᴇxᴀᴍᴘʟᴇ: +1234567890
+
+ᴜsᴇ /cancel ᴛᴏ sᴛᴏᴘ</b>"""
+
+PHONE_NUMBER_TEXT = """<b>📱 ᴇɴᴛᴇʀ ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀ
+
+ᴘʟᴇᴀsᴇ ᴇɴᴛᴇʀ ʏᴏᴜʀ ᴛᴇʟᴇɢʀᴀᴍ ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀ:
+
+ғᴏʀᴍᴀᴛ: +countrycode followed by phone number
+ᴇxᴀᴍᴘʟᴇ: +1234567890
+
+ᴜsᴇ /cancel ᴛᴏ sᴛᴏᴘ</b>"""
+
+OTP_TEXT = """<b>🔐 ᴇɴᴛᴇʀ ᴏᴛᴘ
+
+ᴘʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴛʜᴇ ᴏᴛᴘ sᴇɴᴛ ᴛᴏ ʏᴏᴜʀ ᴛᴇʟᴇɢʀᴀᴍ ᴀᴄᴄᴏᴜɴᴛ:
+
+ᴇxᴀᴍᴘʟᴇ: 12345
+
+ᴜsᴇ /cancel ᴛᴏ sᴛᴏᴘ</b>"""
+
+PASSWORD_TEXT = """<b>🔒 ᴇɴᴛᴇʀ 2ғᴀ ᴘᴀssᴡᴏʀᴅ
+
+ʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ ʜᴀs 2ғᴀ ᴇɴᴀʙʟᴇᴅ. 
+ᴘʟᴇᴀsᴇ ᴇɴᴛᴇʀ ʏᴏᴜʀ ᴘᴀssᴡᴏʀᴅ:
+
+ᴜsᴇ /cancel ᴛᴏ sᴛᴏᴘ</b>"""
+
+LOGIN_SUCCESS = """<b>✅ ʟᴏɢɪɴ sᴜᴄᴄᴇssғᴜʟ!
+
+ʏᴏᴜ ᴄᴀɴ ɴᴏᴡ sᴇɴᴅ ᴍᴇ ᴛᴇʟᴇɢʀᴀᴍ ʟɪɴᴋs ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅ ᴄᴏɴᴛᴇɴᴛ!</b>"""
+
+ALREADY_LOGGED_IN = """<b>✅ ᴀʟʀᴇᴀᴅʏ ʟᴏɢɢᴇᴅ ɪɴ
+
+ʏᴏᴜ ᴀʀᴇ ᴀʟʀᴇᴀᴅʏ ʟᴏɢɢᴇᴅ ɪɴ!
+
+sᴇɴᴅ ᴍᴇ ᴀ ᴛᴇʟᴇɢʀᴀᴍ ʟɪɴᴋ ᴛᴏ sᴛᴀʀᴛ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ.
+
+ᴜsᴇ /logout ᴛᴏ ʟᴏɢᴏᴜᴛ</b>"""
+
+# Broadcast messages
+BROADCAST_START = """<b>📢 ʙʀᴏᴀᴅᴄᴀsᴛ sᴛᴀʀᴛᴇᴅ
+
+sᴇɴᴅɪɴɢ ᴍᴇssᴀɢᴇ ᴛᴏ ᴀʟʟ ᴜsᴇʀs...</b>"""
+
+BROADCAST_COMPLETE = """<b>✅ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇ
+
+ᴛᴏᴛᴀʟ ᴜsᴇʀs: {total}
+sᴜᴄᴄᴇss: {success}
+ғᴀɪʟᴇᴅ: {failed}</b>"""
+
+# Stats messages
+STATS_TEXT = """<b>📊 ʙᴏᴛ sᴛᴀᴛɪsᴛɪᴄs
+
+👥 ᴛᴏᴛᴀʟ ᴜsᴇʀs: {users}
+📱 ᴀᴄᴛɪᴠᴇ sᴇssɪᴏɴs: {sessions}
+⬇️ ᴅᴏᴡɴʟᴏᴀᴅs ᴛᴏᴅᴀʏ: {downloads}
+🚀 ᴜᴘᴛɪᴍᴇ: {uptime}
+
+💾 sʏsᴛᴇᴍ ɪɴғᴏ:
+• ᴄᴘᴜ: {cpu}%
+• ʀᴀᴍ: {ram}%
+• ᴅɪsᴋ: {disk}%</b>"""
+
+# Admin messages
+ADMIN_HELP = """<b>👨‍💻 ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs
+
+/stats - ᴠɪᴇᴡ ʙᴏᴛ sᴛᴀᴛɪsᴛɪᴄs
+/broadcast - ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇ
+/users - ɢᴇᴛ ᴜsᴇʀ ʟɪsᴛ
+/ban - ʙᴀɴ ᴀ ᴜsᴇʀ
+/unban - ᴜɴʙᴀɴ ᴀ ᴜsᴇʀ
+/maintenance - ᴛᴏɢɢʟᴇ ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ
+/logs - ɢᴇᴛ ʟᴏɢs</b>"""
+
+NOT_ADMIN = """<b>❌ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ
+
+ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ ᴛᴏ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ.</b>"""
+
+# Download messages
+DOWNLOAD_START = """<b>⬇️ ᴅᴏᴡɴʟᴏᴀᴅ sᴛᴀʀᴛᴇᴅ
+
+ᴘʀᴏᴄᴇssɪɴɢ ʏᴏᴜʀ ʀᴇǫᴜᴇsᴛ...</b>"""
+
+UPLOAD_START = """<b>⬆️ ᴜᴘʟᴏᴀᴅ sᴛᴀʀᴛᴇᴅ
+
+sᴇɴᴅɪɴɢ ғɪʟᴇ ᴛᴏ ʏᴏᴜ...</b>"""
+
+BATCH_START = """<b>📦 ʙᴀᴛᴄʜ ᴅᴏᴡɴʟᴏᴀᴅ sᴛᴀʀᴛᴇᴅ
+
+ᴘʀᴏᴄᴇssɪɴɢ {total} ᴍᴇssᴀɢᴇs...
+
+ᴜsᴇ /cancel ᴛᴏ sᴛᴏᴘ</b>"""
+
+# Progress messages
+PROGRESS_TEXT = """<b>📈 ᴘʀᴏɢʀᴇss: {percentage}%
+
+{bar}
+
+📊 {current} / {total}
+⚡ sᴘᴇᴇᴅ: {speed}/s
+⏱️ ᴇᴛᴀ: {eta}</b>"""
+
+# Cancel messages
+CANCEL_SUCCESS = """<b>🛑 ᴄᴀɴᴄᴇʟʟᴇᴅ
+
+ᴀʟʟ ᴏᴘᴇʀᴀᴛɪᴏɴs ʜᴀᴠᴇ ʙᴇᴇɴ ᴄᴀɴᴄᴇʟʟᴇᴅ.</b>"""
+
+NOTHING_TO_CANCEL = """<b>❌ ɴᴏᴛʜɪɴɢ ᴛᴏ ᴄᴀɴᴄᴇʟ
+
+ɴᴏ ᴀᴄᴛɪᴠᴇ ᴏᴘᴇʀᴀᴛɪᴏɴs ғᴏᴜɴᴅ.</b>"""
+
+# Maintenance mode
+MAINTENANCE_ON = """<b>🔧 ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ ᴍᴏᴅᴇ
+
+ᴛʜᴇ ʙᴏᴛ ɪs ᴄᴜʀʀᴇɴᴛʟʏ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ.
+ᴘʟᴇᴀsᴇ ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ.
+
+ғᴏʟʟᴏᴡ @Tech_VJ ғᴏʀ ᴜᴘᴅᴀᴛᴇs.</b>"""
+
+# Force subscription
+FORCE_SUB_TEXT = """<b>❌ ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ ғɪʀsᴛ!
+
+ᴛᴏ ᴜsᴇ ᴛʜɪs ʙᴏᴛ, ʏᴏᴜ ᴍᴜsᴛ ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟ:
+
+{channel}
+
+ᴀғᴛᴇʀ ᴊᴏɪɴɪɴɢ, ᴄʟɪᴄᴋ "✅ ᴠᴇʀɪғʏ" ʙᴇʟᴏᴡ.</b>"""
+
+# Additional strings that might be needed
+WELCOME_TEXT = START_TXT
+ABOUT_TEXT = """<b>ℹ️ ᴀʙᴏᴜᴛ ᴛʜɪs ʙᴏᴛ
+
+ᴛʜɪs ʙᴏᴛ ʜᴇʟᴘs ʏᴏᴜ sᴀᴠᴇ ʀᴇsᴛʀɪᴄᴛᴇᴅ ᴄᴏɴᴛᴇɴᴛ ғʀᴏᴍ ᴛᴇʟᴇɢʀᴀᴍ.
+
+🔧 ᴅᴇᴠᴇʟᴏᴘᴇʀ: @VJ_Botz
+📢 ᴄʜᴀɴɴᴇʟ: @Tech_VJ
+⭐ ʀᴀᴛᴇ ᴜs: ɢɪᴛʜᴜʙ.ᴄᴏᴍ
+
+💝 sᴜᴘᴘᴏʀᴛ ᴜs:
+• sʜᴀʀᴇ ᴡɪᴛʜ ғʀɪᴇɴᴅs
+• ʀᴀᴛᴇ ᴏᴜʀ ᴄʜᴀɴɴᴇʟ
+• ɢɪᴠᴇ ғᴇᴇᴅʙᴀᴄᴋ</b>"""
+
+CONTACT_TEXT = """<b>📞 ᴄᴏɴᴛᴀᴄᴛ & sᴜᴘᴘᴏʀᴛ
+
+🧑‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ: @VJ_Botz
+📢 ᴄʜᴀɴɴᴇʟ: @Tech_VJ
+💬 sᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ: @VJ_Support
+
+🐛 ʀᴇᴘᴏʀᴛ ʙᴜɢs ᴏʀ ɪssᴜᴇs
+💡 sᴜɢɢᴇsᴛ ɴᴇᴡ ғᴇᴀᴛᴜʀᴇs  
+❓ ɢᴇᴛ ʜᴇʟᴘ ᴡɪᴛʜ ᴜsɪɴɢ ᴛʜᴇ ʙᴏᴛ</b>"""
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
