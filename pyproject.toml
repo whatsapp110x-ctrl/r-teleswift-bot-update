@@ -9,6 +9,7 @@ dependencies = [
     "flask-sqlalchemy>=3.1.1",
     "gunicorn>=23.0.0",
     "motor>=3.7.1",
+    "nest-asyncio>=1.5.8",
     "psycopg2-binary>=2.9.10",
     "pyrofork>=2.3.68",
     "pyrogram>=2.0.106",
