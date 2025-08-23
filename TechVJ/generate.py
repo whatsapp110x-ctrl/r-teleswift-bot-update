@@ -2,6 +2,7 @@
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
 # Ask Doubt on telegram @KingVJ01
 
+import asyncio  # ADDED - This was missing
 import traceback
 import logging
 from pyrogram.types import Message
