@@ -1,23 +1,23 @@
 import os
 
 # Bot token @Botfather
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8007887534:AAHApmhsnQdaeZFK688phAHZAtl5-CL73Pw")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 # Your API ID from my.telegram.org
-API_ID = int(os.environ.get("API_ID", "11004381"))
+API_ID = int(os.environ.get("API_ID", ""))
 
 # Your API Hash from my.telegram.org
-API_HASH = os.environ.get("API_HASH", "8e0588044fcf7672cfe1341185bfc94c")
+API_HASH = os.environ.get("API_HASH", "")
 
 # Your Owner / Admin Id For Broadcast 
-ADMINS = int(os.environ.get("ADMINS", "7052170756"))
+ADMINS = int(os.environ.get("ADMINS", ""))
 
 # Your Mongodb Database Url
 # Warning - Give Db uri in deploy server environment variable, don't give in repo.
-DB_URI = os.environ.get("DB_URI", "mongodb+srv://whatsapp110x:whatsapp110x@cluster0.dh2ygtt.mongodb.net/sample_mflix?retryWrites=true&w=majority&appName=Cluster0")
+DB_URI = os.environ.get("DB_URI", "")
 
 # Database name
-DB_NAME = os.environ.get("DB_NAME", "RTeleSwift")
+DB_NAME = os.environ.get("DB_NAME", "")
 
 # Error message display toggle
 ERROR_MESSAGE = os.environ.get("ERROR_MESSAGE", "True").lower() == "true"
