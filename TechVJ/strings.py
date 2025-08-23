@@ -1,94 +1,126 @@
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
-# Ask Doubt on telegram @KingVJ01
 
-HELP_TXT = """🌟 **Help Menu** 
+START_TXT = """<b>ʜᴇʏ {user_mention} 👋,
 
-📋 **How to use this bot:**
+ɪ'ᴍ ᴀ ᴘᴏᴡᴇʀғᴜʟ ʙᴏᴛ ᴛʜᴀᴛ ᴄᴀɴ sᴀᴠᴇ ʀᴇsᴛʀɪᴄᴛᴇᴅ ᴄᴏɴᴛᴇɴᴛ ғʀᴏᴍ ᴛᴇʟᴇɢʀᴀᴍ ᴄʜᴀɴɴᴇʟs & ɢʀᴏᴜᴘs!
 
-🔐 **First, you need to login:**
-• Use `/login` command to add your Telegram session
-• Follow the instructions to enter your phone number and OTP
-• Once logged in, you can download restricted content
+🔥 ғᴇᴀᴛᴜʀᴇs:
+• sɪɴɢʟᴇ ᴘᴏsᴛ ᴅᴏᴡɴʟᴏᴀᴅ
+• ʙᴜʟᴋ/ʙᴀᴛᴄʜ ᴅᴏᴡɴʟᴏᴀᴅ 
+• ʜɪɢʜ ǫᴜᴀʟɪᴛʏ ᴍᴇᴅɪᴀ
+• ғᴀsᴛ & ʀᴇʟɪᴀʙʟᴇ
 
-📥 **For downloading content:**
+📝 ʜᴏᴡ ᴛᴏ ᴜsᴇ:
+1. First login with /login command
+2. Send me any Telegram post link
+3. I'll download and forward it to you!
 
-**🔒 FOR PRIVATE CHATS:**
-• First send invite link of the chat (if not already member)
-• Then send the post link you want to download
+💡 ғᴏʀ ʙᴀᴛᴄʜ ᴅᴏᴡɴʟᴏᴀᴅ, ᴜsᴇ ʀᴀɴɢᴇ: 
+`https://t.me/channel/100-150`
 
-**🤖 FOR BOT CHATS:**
-• Send link with '/b/', bot's username and message id
-• Format: `https://t.me/b/botusername/4321`
+ᴅᴇᴠᴇʟᴏᴘᴇʀ: @VJ_Botz</b>"""
 
-**📚 MULTI POSTS:**
-• Send post links with range format "from - to"
-• Examples:
-  - `https://t.me/channel/1001-1010`
-  - `https://t.me/c/123456/101-120`
-• Space between numbers doesn't matter
+HELP_TXT = """<b>📖 ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅs
 
-**⚠️ Important Notes:**
-• You must `/login` first to download restricted content
-• Use `/logout` to remove your session
-• Use `/cancel` to stop any ongoing download
-• Only admins can use `/broadcast` command
+🤖 ᴄᴏᴍᴍᴀɴᴅs:
+• /start - sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ
+• /help - sʜᴏᴡ ᴛʜɪs ʜᴇʟᴘ
+• /login - ʟᴏɢɪɴ ᴡɪᴛʜ ʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ
+• /logout - ʟᴏɢᴏᴜᴛ ғʀᴏᴍ ᴀᴄᴄᴏᴜɴᴛ
+• /cancel - ᴄᴀɴᴄᴇʟ ᴄᴜʀʀᴇɴᴛ ᴏᴘᴇʀᴀᴛɪᴏɴ
 
-**🔧 Commands:**
-• `/start` - Start the bot
-• `/help` - Show this help menu
-• `/login` - Login with your Telegram account
-• `/logout` - Logout and remove session
-• `/cancel` - Cancel ongoing operations
-• `/broadcast` - Send message to all users (Admin only)
+📖 ʜᴏᴡ ᴛᴏ ᴜsᴇ:
+1. ʟᴏɢɪɴ ᴡɪᴛʜ /login ᴄᴏᴍᴍᴀɴᴅ ғɪʀsᴛ
+2. sᴇɴᴅ ᴀɴʏ ᴛᴇʟᴇɢʀᴀᴍ ᴘᴏsᴛ ʟɪɴᴋ
+3. ғᴏʀ sɪɴɢʟᴇ: `https://t.me/channel/123`
+4. ғᴏʀ ʙᴀᴛᴄʜ: `https://t.me/channel/100-150`
 
-**📞 Support:**
-• Developer: t.me/fightermonk110"""
+🔗 ʟɪɴᴋ ғᴏʀᴍᴀᴛs sᴜᴘᴘᴏʀᴛᴇᴅ:
+• `https://t.me/username/123`
+• `https://t.me/c/123456789/123`  
+• `https://t.me/b/123456789_123/123`
 
-START_TXT = """👋 **Hi {user_mention}!**
+📦 ʙᴀᴛᴄʜ ᴅᴏᴡɴʟᴏᴀᴅ:
+• ᴜsᴇ ғᴏʀᴍᴀᴛ: `link/start-end`
+• ᴍᴀx ʙᴀᴛᴄʜ sɪᴢᴇ: 50 ᴍᴇssᴀɢᴇs
+• ᴇxᴀᴍᴘʟᴇ: `https://t.me/channel/100-150`
 
-🤖 I am **R-TeleSwiftBot💖**
+ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: @VJ_Botz</b>"""
 
-📥 I can help you download and forward restricted content from Telegram channels and groups.
-
-🔐 **To get started:**
-1. Use `/login` to authenticate with your Telegram account
-2. Send me any Telegram post link to download it
-3. I'll forward the content to you!
-
-💡 **Need help?** Use `/help` command
-
-⚡ **Powered by:** @Ashish"""
-
-LOGIN_HELP = """🔐 **Login Instructions:**
-
-1️⃣ **Send your phone number** (with country code)
-   Example: `+1234567890`
-
-2️⃣ **Enter OTP** when you receive it
-   Format: `1 2 3 4 5` (with spaces)
-
-3️⃣ **Enter 2FA password** if you have one enabled
-
-✅ Once logged in, you can download restricted content!
-
-⚠️ **Security Note:** Your session is stored securely and only used for downloading content."""
-
+# Error messages dictionary
 ERROR_MESSAGES = {
-    'not_logged_in': "🔐 **You need to login first!**\n\nUse `/login` command to authenticate your Telegram account.",
-    'session_expired': "⚠️ **Your session has expired!**\n\nPlease `/logout` and then `/login` again.",
-    'invalid_link': "❌ **Invalid Telegram link!**\n\nPlease send a valid Telegram post link.",
-    'download_failed': "💥 **Download failed!**\n\nThere was an error downloading the content. Please try again.",
-    'upload_failed': "💥 **Upload failed!**\n\nThere was an error uploading the content. Please try again.",
-    'batch_cancelled': "🛑 **Batch download cancelled!**\n\nAll pending downloads have been stopped.",
-    'task_in_progress': "⏳ **Another task is in progress!**\n\nPlease wait for it to complete or use `/cancel`",
-    'file_too_large': "📦 **File too large!**\n\nThe file size exceeds the maximum limit.",
-    'private_chat_error': "🔒 **Private chat access error!**\n\nMake sure you're a member of the chat or channel.",
-    'bot_blocked': "🚫 **Bot access blocked!**\n\nThe bot doesn't have access to this chat.",
-    'invalid_session': "❌ **Invalid session!**\n\nPlease logout and login again.",
-    'database_error': "💾 **Database error!**\n\nThere was an error accessing the database. Please try again later."
+    'not_logged_in': """❌ **You're not logged in!**
+    
+Please use /login command first to authenticate with your Telegram account.
+
+After logging in, you can send me any Telegram link to download content.""",
+
+    'session_expired': """❌ **Your session has expired!**
+    
+Your login session is no longer valid. Please use /login command to authenticate again.
+
+This can happen due to:
+• Account security changes
+• Long period of inactivity
+• Session being revoked""",
+
+    'invalid_link': """❌ **Invalid Telegram link!**
+    
+Please send a valid Telegram post link in one of these formats:
+• `https://t.me/username/123`
+• `https://t.me/c/123456789/123`
+• `https://t.me/b/123456789_123/123`
+
+For batch download, use range format:
+• `https://t.me/username/100-150`""",
+
+    'access_denied': """❌ **Access denied!**
+    
+Cannot access this channel or group because:
+• Channel/group is private and you're not a member
+• Content is restricted
+• Channel/group doesn't exist
+
+Make sure you're a member of the channel/group first.""",
+
+    'file_too_large': """❌ **File too large!**
+    
+The file size exceeds the maximum limit. 
+
+Please try:
+• Smaller files
+• Compress the file
+• Split large files into smaller parts""",
+
+    'download_failed': """❌ **Download failed!**
+    
+Failed to download the content due to:
+• Network issues
+• Server limitations
+• File corruption
+• Temporary restrictions
+
+Please try again later.""",
+
+    'rate_limited': """⏳ **Rate limited!**
+    
+Too many requests. Please wait before sending more links.
+
+This helps prevent spam and ensures stable service for all users.""",
+
+    'maintenance': """🔧 **Under maintenance!**
+    
+The bot is currently under maintenance. Please try again later.
+
+Follow @Tech_VJ for updates.""",
+    
+    'unknown_error': """❌ **Unknown error occurred!**
+    
+An unexpected error happened. Please try again.
+
+If the issue persists, contact: @VJ_Botz"""
 }
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
-# Ask Doubt on telegram @KingVJ01
