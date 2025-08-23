@@ -8,7 +8,7 @@ import logging
 import pyrogram
 from pyrogram.client import Client
 from pyrogram import filters, enums
-from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated, UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageNotModified
+from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated, UserAlreadyParticipant, InviteHashExpired, UsernameNotOccupied, MessageNotModified, AuthKeyUnregistered, SessionExpired, SessionRevoked
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message 
 from config import (
     API_ID, API_HASH, ERROR_MESSAGE, MAX_BATCH_SIZE, PROGRESS_UPDATE_INTERVAL, 
@@ -58,6 +58,7 @@ def is_valid_telegram_post_link(text):
 class BatchTemp:
     """Class to manage batch operations state"""
     IS_BATCH = {}
+    USER_TASKS = {}
     
     @classmethod
     def set_batch_state(cls, user_id, state):
@@ -66,6 +67,19 @@ class BatchTemp:
     @classmethod
     def get_batch_state(cls, user_id):
         return cls.IS_BATCH.get(user_id, True)
+    
+    @classmethod
+    def set_user_task(cls, user_id, task):
+        cls.USER_TASKS[user_id] = task
+    
+    @classmethod
+    def get_user_task(cls, user_id):
+        return cls.USER_TASKS.get(user_id)
+    
+    @classmethod
+    def clear_user_task(cls, user_id):
+        if user_id in cls.USER_TASKS:
+            del cls.USER_TASKS[user_id]
 
 async def safe_delete_file(file_path):
     """Safely delete a file"""
@@ -76,77 +90,30 @@ async def safe_delete_file(file_path):
     except Exception as e:
         logger.error(f"Error deleting file {file_path}: {e}")
 
-async def ultra_fast_download(acc, msg, message, max_retries=MAX_RETRIES):
-    """Ultra-fast download with retry mechanism"""
-    for attempt in range(max_retries):
-        try:
-            logger.info(f"Ultra-fast download attempt {attempt + 1}")
-            file = await acc.download_media(msg, progress=progress, progress_args=[message, "down"])
-            return file
-        except Exception as e:
-            logger.warning(f"Download attempt {attempt + 1} failed: {e}")
-            if attempt < max_retries - 1:
-                await asyncio.sleep(RETRY_DELAY)
-            else:
-                raise e
-
-async def get_ultra_hd_thumbnail(acc, msg):
-    """Get the highest quality thumbnail available - FIXED FOR HIGH QUALITY"""
+async def validate_session(session_string):
+    """Validate if session is still active"""
     try:
-        thumbnail_path = None
-        
-        # For videos - Extract highest quality thumbnail
-        if msg.video and hasattr(msg.video, 'thumbs') and msg.video.thumbs:
-            largest_thumb = None
-            max_size = 0
-            
-            for thumb in msg.video.thumbs:
-                if hasattr(thumb, 'width') and hasattr(thumb, 'height'):
-                    size = thumb.width * thumb.height
-                    if size > max_size:
-                        max_size = size
-                        largest_thumb = thumb
-            
-            if largest_thumb:
-                logger.info(f"Downloading HD video thumbnail: {largest_thumb.width}x{largest_thumb.height}")
-                thumbnail_path = await acc.download_media(largest_thumb.file_id)
-                
-        # For documents (MKV, MP4 files) - Extract highest quality thumbnail  
-        elif msg.document and hasattr(msg.document, 'thumbs') and msg.document.thumbs:
-            largest_thumb = None
-            max_size = 0
-            
-            for thumb in msg.document.thumbs:
-                if hasattr(thumb, 'width') and hasattr(thumb, 'height'):
-                    size = thumb.width * thumb.height
-                    if size > max_size:
-                        max_size = size
-                        largest_thumb = thumb
-            
-            if largest_thumb:
-                logger.info(f"Downloading HD document thumbnail: {largest_thumb.width}x{largest_thumb.height}")
-                thumbnail_path = await acc.download_media(largest_thumb.file_id)
-        
-        # For photos - Get highest resolution
-        elif msg.photo and hasattr(msg.photo, 'sizes') and msg.photo.sizes:
-            largest_size = max(msg.photo.sizes, key=lambda x: x.width * x.height)
-            logger.info(f"Downloading HD photo: {largest_size.width}x{largest_size.height}")
-            thumbnail_path = await acc.download_media(largest_size.file_id)
-        
-        if thumbnail_path and os.path.exists(thumbnail_path):
-            logger.info(f"Successfully downloaded HD thumbnail: {thumbnail_path}")
-            return thumbnail_path
-        else:
-            logger.warning("No thumbnail available")
-            return None
-            
+        test_client = Client(":memory:", session_string=session_string, api_id=API_ID, api_hash=API_HASH)
+        await test_client.connect()
+        me = await test_client.get_me()
+        await test_client.disconnect()
+        return True
+    except (AuthKeyUnregistered, SessionExpired, SessionRevoked):
+        return False
     except Exception as e:
-        logger.error(f"Error getting HD thumbnail: {e}")
-        return None
+        logger.error(f"Session validation error: {e}")
+        return False
 
-async def create_client_with_retry(user_data):
-    """Create and connect client with retry mechanism"""
-    for attempt in range(MAX_RETRIES):
+async def create_client_with_retry(user_data, max_retries=3):
+    """Create and connect client with retry mechanism and session validation"""
+    if not user_data:
+        raise Exception("No session data provided")
+    
+    # First validate the session
+    if not await validate_session(user_data):
+        raise Exception("Session expired or invalid")
+    
+    for attempt in range(max_retries):
         try:
             acc = Client(
                 ":memory:", 
@@ -155,77 +122,258 @@ async def create_client_with_retry(user_data):
                 api_id=API_ID
             )
             await acc.connect()
+            
+            # Test connection
+            await acc.get_me()
             return acc
+            
+        except (AuthKeyUnregistered, SessionExpired, SessionRevoked):
+            raise Exception("Session expired - please login again")
         except Exception as e:
             logger.warning(f"Client connection attempt {attempt + 1} failed: {e}")
-            if attempt < MAX_RETRIES - 1:
-                await asyncio.sleep(RETRY_DELAY)
+            if attempt < max_retries - 1:
+                await asyncio.sleep(RETRY_DELAY * (attempt + 1))
+            else:
+                raise Exception(f"Failed to connect after {max_retries} attempts")
+
+async def ultra_fast_download(acc, msg, message, max_retries=MAX_RETRIES):
+    """Ultra-fast download with retry mechanism"""
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Download attempt {attempt + 1} for message {msg.id}")
+            file = await acc.download_media(msg, progress=progress, progress_args=[message, "down"])
+            if file and os.path.exists(file):
+                return file
+            else:
+                raise Exception("Downloaded file not found")
+        except Exception as e:
+            logger.warning(f"Download attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(RETRY_DELAY * (attempt + 1))
             else:
                 raise e
 
-async def downstatus(client, statusfile, message, chat):
-    """Lightning-fast download status monitor"""
+async def get_ultra_hd_thumbnail(acc, msg):
+    """Get the highest quality thumbnail available"""
     try:
-        last_txt = ""
-        while True:
-            if os.path.exists(statusfile):
-                break
-            await asyncio.sleep(MINIMAL_DELAY)
-          
-        while os.path.exists(statusfile):
-            try:
-                with open(statusfile, "r") as downread:
-                    txt = downread.read()
-                if txt != last_txt:
-                    await client.edit_message_text(chat, message.id, f"⚡ **Downloading:** {txt}")
-                    last_txt = txt
-                await asyncio.sleep(PROGRESS_THROTTLE)
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-async def upstatus(client, statusfile, message, chat):
-    """Lightning-fast upload status monitor"""
-    try:
-        last_txt = ""
-        while True:
-            if os.path.exists(statusfile):
-                break
-            await asyncio.sleep(MINIMAL_DELAY)      
+        thumbnail_path = None
+        
+        # For videos
+        if msg.video and hasattr(msg.video, 'thumbs') and msg.video.thumbs:
+            largest_thumb = max(msg.video.thumbs, key=lambda x: getattr(x, 'file_size', 0))
+            thumbnail_path = await acc.download_media(largest_thumb.file_id)
+                
+        # For documents
+        elif msg.document and hasattr(msg.document, 'thumbs') and msg.document.thumbs:
+            largest_thumb = max(msg.document.thumbs, key=lambda x: getattr(x, 'file_size', 0))
+            thumbnail_path = await acc.download_media(largest_thumb.file_id)
+        
+        # For photos
+        elif msg.photo:
+            thumbnail_path = await acc.download_media(msg.photo.file_id)
+        
+        if thumbnail_path and os.path.exists(thumbnail_path):
+            return thumbnail_path
+        else:
+            return None
             
-        while os.path.exists(statusfile):
-            try:
-                with open(statusfile, "r") as upread:
-                    txt = upread.read()
-                if txt != last_txt:
-                    await client.edit_message_text(chat, message.id, f"⚡ **Uploading:** {txt}")
-                    last_txt = txt
-                await asyncio.sleep(PROGRESS_THROTTLE)
-            except Exception:
-                pass
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error getting thumbnail: {e}")
+        return None
 
 _last_progress_update = {}
 
 def progress(current, total, message, type):
-    """Lightning-fast progress with throttling"""
+    """Progress callback with throttling"""
     try:
         percentage = current * 100 / total
         progress_key = f"{message.id}_{type}"
         
         if progress_key in _last_progress_update:
-            if percentage - _last_progress_update[progress_key] < 5:
+            if abs(percentage - _last_progress_update[progress_key]) < 5:
                 return
         
         _last_progress_update[progress_key] = percentage
-        speed = (current / 1024 / 1024) * 8
         
         with open(f'{message.id}{type}status.txt', "w") as fileup:
-            fileup.write(f"⚡ {percentage:.1f}% | {speed:.1f}MB/s")
+            fileup.write(f"{percentage:.1f}% | {current/1024/1024:.1f}MB/{total/1024/1024:.1f}MB")
     except Exception:
         pass
+
+async def process_media_message(client, message, acc, msg):
+    """Process media message for download"""
+    try:
+        filename = None
+        file_size = 0
+        
+        if msg.document:
+            filename = getattr(msg.document, 'file_name', f'document_{msg.id}')
+            file_size = msg.document.file_size
+        elif msg.video:
+            filename = f'video_{msg.id}.mp4'
+            file_size = msg.video.file_size
+        elif msg.photo:
+            filename = f'photo_{msg.id}.jpg'
+            file_size = msg.photo.file_size
+        elif msg.audio:
+            filename = getattr(msg.audio, 'file_name', f'audio_{msg.id}.mp3')
+            file_size = msg.audio.file_size
+        else:
+            return False
+        
+        if file_size > MAX_FILE_SIZE:
+            await message.reply_text(f"❌ File too large: {file_size/1024/1024:.1f}MB (Max: {MAX_FILE_SIZE/1024/1024:.1f}MB)")
+            return False
+        
+        # Send download status
+        status_msg = await message.reply_text("⬇️ Downloading...")
+        
+        try:
+            # Download file
+            file_path = await ultra_fast_download(acc, msg, status_msg)
+            
+            if not file_path or not os.path.exists(file_path):
+                await status_msg.edit("❌ Download failed - file not found")
+                return False
+            
+            await status_msg.edit("⬆️ Uploading...")
+            
+            # Get thumbnail
+            thumbnail = await get_ultra_hd_thumbnail(acc, msg)
+            
+            # Upload based on media type
+            if msg.document:
+                await client.send_document(
+                    message.chat.id,
+                    file_path,
+                    thumb=thumbnail,
+                    caption=f"📎 {filename}",
+                    progress=progress,
+                    progress_args=[status_msg, "up"]
+                )
+            elif msg.video:
+                await client.send_video(
+                    message.chat.id,
+                    file_path,
+                    thumb=thumbnail,
+                    caption=f"🎥 {filename}",
+                    progress=progress,
+                    progress_args=[status_msg, "up"]
+                )
+            elif msg.photo:
+                await client.send_photo(
+                    message.chat.id,
+                    file_path,
+                    caption=f"🖼️ {filename}"
+                )
+            elif msg.audio:
+                await client.send_audio(
+                    message.chat.id,
+                    file_path,
+                    thumb=thumbnail,
+                    caption=f"🎵 {filename}",
+                    progress=progress,
+                    progress_args=[status_msg, "up"]
+                )
+            
+            await status_msg.delete()
+            
+            # Clean up files
+            await safe_delete_file(file_path)
+            await safe_delete_file(thumbnail)
+            await safe_delete_file(f"{status_msg.id}downstatus.txt")
+            await safe_delete_file(f"{status_msg.id}upstatus.txt")
+            
+            return True
+            
+        except Exception as e:
+            await status_msg.edit(f"❌ Error: {str(e)[:100]}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error processing media: {e}")
+        return False
+
+async def process_single_message(client, message, datas, msgid):
+    """Process a single message for download"""
+    acc = None
+    try:
+        # Check if user has active task
+        if BatchTemp.get_user_task(message.from_user.id):
+            await message.reply_text("⏳ Another task is in progress. Please wait or use /cancel")
+            return False
+        
+        # Set user task
+        BatchTemp.set_user_task(message.from_user.id, "single_download")
+        
+        # Get user session
+        user_data = await db.get_session(message.from_user.id)
+        if user_data is None:
+            await message.reply_text(ERROR_MESSAGES['not_logged_in'])
+            return False
+        
+        # Create client connection
+        try:
+            acc = await create_client_with_retry(user_data)
+        except Exception as e:
+            error_msg = str(e)
+            if "Session expired" in error_msg or "invalid" in error_msg:
+                await message.reply_text(ERROR_MESSAGES['session_expired'])
+                # Clear invalid session
+                await db.set_session(message.from_user.id, None)
+            else:
+                await message.reply_text(f"❌ Connection error: {error_msg[:100]}")
+            return False
+        
+        # Determine chat ID
+        try:
+            if "/c/" in message.text:
+                chat_id = int("-100" + str(datas[4]))
+            else:
+                chat_id = datas[3]
+        except Exception:
+            await message.reply_text("❌ Invalid link format")
+            return False
+        
+        # Get message
+        try:
+            msg = await acc.get_messages(chat_id, msgid)
+            
+            if not msg or (hasattr(msg, 'empty') and msg.empty):
+                await message.reply_text("❌ Message not found or empty")
+                return False
+            
+            # Process the message
+            if msg.media:
+                success = await process_media_message(client, message, acc, msg)
+                return success
+            elif msg.text:
+                await client.send_message(
+                    message.chat.id,
+                    f"📝 **Text Message:**\n\n{msg.text}"
+                )
+                return True
+            else:
+                await message.reply_text("❌ Message has no content")
+                return False
+                
+        except Exception as msg_error:
+            logger.error(f"Error getting message {msgid}: {msg_error}")
+            await message.reply_text(f"❌ Failed to get message: {str(msg_error)[:100]}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error processing message {msgid}: {e}")
+        await message.reply_text(f"❌ Processing error: {str(e)[:100]}")
+        return False
+    finally:
+        # Clean up
+        if acc:
+            try:
+                await acc.disconnect()
+            except:
+                pass
+        BatchTemp.clear_user_task(message.from_user.id)
 
 @Client.on_message(filters.command(["start"]))
 async def send_start(client: Client, message: Message):
@@ -272,73 +420,216 @@ async def send_cancel(client: Client, message: Message):
     try:
         await db.update_last_active(message.from_user.id)
         BatchTemp.set_batch_state(message.from_user.id, True)
+        BatchTemp.clear_user_task(message.from_user.id)
         await client.send_message(
             chat_id=message.chat.id, 
-            text="🛑 **Batch Successfully Cancelled.**"
+            text="🛑 **All tasks cancelled successfully.**"
         )
-        logger.info(f"User {message.from_user.id} cancelled batch operation")
+        logger.info(f"User {message.from_user.id} cancelled operations")
     except Exception as e:
         logger.error(f"Error in cancel command: {e}")
         await message.reply_text("❌ An error occurred. Please try again later.")
 
-async def process_single_message(client, message, datas, msgid):
-    """Process a single message for download"""
+@Client.on_message((filters.regex(r"https://t.me/\S+") | filters.regex(r"t.me/\S+")) & filters.private & ~filters.command(["login", "logout", "start", "help", "cancel"]))
+async def save_restricted_content(client, message):
+    """Handle Telegram link processing"""
+    try:
+        await db.update_last_active(message.from_user.id)
+        
+        # Extract URL
+        url = message.text.strip()
+        if not url.startswith('https://'):
+            url = 'https://' + url
+        
+        if not is_valid_telegram_post_link(url):
+            await message.reply_text(ERROR_MESSAGES['invalid_link'])
+            return
+        
+        try:
+            datas = url.split('/')
+        except:
+            await message.reply_text(ERROR_MESSAGES['invalid_link'])
+            return
+        
+        # Handle batch downloads
+        if '-' in datas[-1]:
+            await handle_batch_download(client, message, url, datas)
+        else:
+            # Single message download
+            try:
+                msgid = int(datas[-1])
+            except ValueError:
+                await message.reply_text("❌ Invalid message ID")
+                return
+                
+            success = await process_single_message(client, message, datas, msgid)
+            if success:
+                logger.info(f"Single download completed for user {message.from_user.id}")
+            else:
+                logger.warning(f"Single download failed for user {message.from_user.id}")
+        
+    except Exception as e:
+        logger.error(f"Error in save_restricted_content: {e}")
+        await message.reply_text("❌ An unexpected error occurred. Please try again.")
+
+async def handle_batch_download(client, message, url, datas):
+    """Handle batch download processing"""
+    try:
+        # Check if user has active task
+        if BatchTemp.get_user_task(message.from_user.id):
+            await message.reply_text("⏳ Another task is in progress. Please wait or use /cancel")
+            return
+        
+        # Parse range
+        try:
+            temp = datas[-1].split('-')
+            start_id = int(temp[0])
+            end_id = int(temp[1])
+        except (ValueError, IndexError):
+            await message.reply_text("❌ Invalid batch range format")
+            return
+        
+        if end_id - start_id > MAX_BATCH_SIZE:
+            await message.reply_text(f"❌ Batch size too large. Max: {MAX_BATCH_SIZE}")
+            return
+        
+        if start_id >= end_id:
+            await message.reply_text("❌ Invalid range: start must be less than end")
+            return
+        
+        # Set batch state
+        BatchTemp.set_batch_state(message.from_user.id, False)
+        BatchTemp.set_user_task(message.from_user.id, "batch_download")
+        
+        # Get user session
+        user_data = await db.get_session(message.from_user.id)
+        if user_data is None:
+            await message.reply_text(ERROR_MESSAGES['not_logged_in'])
+            BatchTemp.clear_user_task(message.from_user.id)
+            return
+        
+        # Send batch start message
+        batch_msg = await message.reply_text(
+            f"📦 **Batch Download Started**\n\n"
+            f"📊 **Range:** {start_id} to {end_id}\n"
+            f"📈 **Total:** {end_id - start_id + 1} messages\n"
+            f"⏳ **Status:** Starting...\n\n"
+            f"Use /cancel to stop"
+        )
+        
+        success_count = 0
+        failed_count = 0
+        total_count = end_id - start_id + 1
+        
+        # Process each message
+        for msg_id in range(start_id, end_id + 1):
+            try:
+                # Check if cancelled
+                if BatchTemp.get_batch_state(message.from_user.id):
+                    await batch_msg.edit(
+                        f"🛑 **Batch Download Cancelled!**\n\n"
+                        f"✅ Success: {success_count}\n"
+                        f"❌ Failed: {failed_count}\n"
+                        f"📝 Total: {success_count + failed_count}/{total_count}"
+                    )
+                    BatchTemp.clear_user_task(message.from_user.id)
+                    return
+                
+                # Process single message
+                success = await process_single_message_batch(client, message, datas, msg_id)
+                
+                if success:
+                    success_count += 1
+                else:
+                    failed_count += 1
+                
+                # Update progress every 5 messages
+                if (success_count + failed_count) % 5 == 0 or (success_count + failed_count) == total_count:
+                    try:
+                        await batch_msg.edit(
+                            f"📦 **Batch Download Progress**\n\n"
+                            f"✅ Success: {success_count}\n"
+                            f"❌ Failed: {failed_count}\n"
+                            f"📝 Processed: {success_count + failed_count}/{total_count}\n"
+                            f"📊 Progress: {((success_count + failed_count)/total_count)*100:.1f}%"
+                        )
+                    except MessageNotModified:
+                        pass
+                
+                # Small delay to prevent rate limiting
+                await asyncio.sleep(0.5)
+                
+            except Exception as e:
+                logger.error(f"Error processing batch message {msg_id}: {e}")
+                failed_count += 1
+                continue
+        
+        # Final summary
+        await batch_msg.edit(
+            f"✅ **Batch Download Completed!**\n\n"
+            f"📊 **Final Summary:**\n"
+            f"✅ Success: {success_count}\n"
+            f"❌ Failed: {failed_count}\n"
+            f"📝 Total: {total_count}/{total_count}"
+        )
+        
+        logger.info(f"Batch download completed for user {message.from_user.id}: {success_count}/{total_count}")
+        
+    except Exception as e:
+        logger.error(f"Error in batch download: {e}")
+        await message.reply_text(f"❌ Batch download error: {str(e)[:100]}")
+    finally:
+        BatchTemp.clear_user_task(message.from_user.id)
+        BatchTemp.set_batch_state(message.from_user.id, True)
+
+async def process_single_message_batch(client, message, datas, msgid):
+    """Process single message in batch mode"""
     acc = None
     try:
         # Get user session
         user_data = await db.get_session(message.from_user.id)
         if user_data is None:
-            logger.error("User not logged in")
             return False
         
         # Create client connection
-        acc = await create_client_with_retry(user_data)
-        
-        # Determine chat ID based on URL format
-        if "/c/" in message.text:
-            chat_id = int("-100" + str(datas[4]))
-        else:
-            chat_id = datas[3]
-        
-        # Get message - FIXED: Handle list properly
         try:
-            messages = await acc.get_messages(chat_id, msgid)
-            
-            # Handle single message or list
-            if isinstance(messages, list):
-                if len(messages) == 0:
-                    logger.warning(f"No messages found for ID {msgid}")
-                    return False
-                msg = messages[0]
+            acc = await create_client_with_retry(user_data, max_retries=2)
+        except Exception:
+            return False
+        
+        # Determine chat ID
+        try:
+            if "/c/" in message.text:
+                chat_id = int("-100" + str(datas[4]))
             else:
-                msg = messages
+                chat_id = datas[3]
+        except Exception:
+            return False
+        
+        # Get message
+        try:
+            msg = await acc.get_messages(chat_id, msgid)
             
-            # Check if message exists and is not empty
             if not msg or (hasattr(msg, 'empty') and msg.empty):
-                logger.warning(f"Empty or non-existent message {msgid}")
                 return False
             
-            # Process media content
+            # Process the message
             if msg.media:
-                success = await process_media_message(client, message, acc, msg)
+                success = await process_media_message_batch(client, message, acc, msg)
                 return success
             elif msg.text:
-                # Forward text message
                 await client.send_message(
                     message.chat.id,
-                    f"📝 **Text Message:**\n\n{msg.text}"
+                    f"📝 **Message {msgid}:**\n\n{msg.text[:500]}..."
                 )
                 return True
             else:
-                logger.warning(f"Message {msgid} has no media or text")
                 return False
                 
-        except Exception as msg_error:
-            logger.error(f"Error getting message {msgid}: {msg_error}")
+        except Exception:
             return False
             
-    except Exception as e:
-        logger.error(f"Error processing message {msgid}: {e}")
+    except Exception:
         return False
     finally:
         if acc:
@@ -347,248 +638,52 @@ async def process_single_message(client, message, datas, msgid):
             except:
                 pass
 
-async def process_media_message(client, message, acc, msg):
-    """Process media message with HIGH QUALITY THUMBNAILS - FIXED"""
-    file_path = None
-    thumbnail = None
-    download_msg = None
-    upload_status_file = None
-    upload_task = None
-    
+async def process_media_message_batch(client, message, acc, msg):
+    """Process media message in batch mode (simplified)"""
     try:
-        # Check file size
-        if hasattr(msg.media, 'file_size') and msg.media.file_size > MAX_FILE_SIZE:
-            await message.reply_text("❌ **File too large!**")
+        file_size = 0
+        
+        if msg.document:
+            file_size = msg.document.file_size
+        elif msg.video:
+            file_size = msg.video.file_size
+        elif msg.photo:
+            file_size = msg.photo.file_size
+        elif msg.audio:
+            file_size = msg.audio.file_size
+        else:
             return False
         
-        # Send download status message
-        download_msg = await client.send_message(
-            message.chat.id,
-            "⚡ **Starting ultra-fast download...**"
-        )
-        
-        # Start download status monitoring
-        status_file = f"{download_msg.id}downstatus.txt"
-        status_task = asyncio.create_task(
-            downstatus(client, status_file, download_msg, message.chat.id)
-        )
+        # Skip large files in batch mode
+        if file_size > MAX_FILE_SIZE // 2:  # Half the limit for batch
+            return False
         
         try:
-            # Download with progress
-            file_path = await ultra_fast_download(acc, msg, download_msg)
+            # Download without progress for batch
+            file_path = await acc.download_media(msg)
             
-            if not file_path:
-                await download_msg.edit("❌ **Download failed!**")
+            if not file_path or not os.path.exists(file_path):
                 return False
             
-            # Get HIGH QUALITY thumbnail - MAIN FIX HERE
-            thumbnail = await get_ultra_hd_thumbnail(acc, msg)
-            
-            # Upload file
-            await download_msg.edit("⚡ **Starting ultra-fast upload...**")
-            
-            upload_status_file = f"{download_msg.id}upstatus.txt"
-            upload_task = asyncio.create_task(
-                upstatus(client, upload_status_file, download_msg, message.chat.id)
-            )
-            
-            # Upload with HIGH QUALITY thumbnails based on media type
-            if msg.photo:
-                await client.send_photo(
-                    message.chat.id,
-                    file_path,
-                    caption=msg.caption or "📸 **Photo downloaded successfully!**"
-                )
+            # Upload based on media type (simplified)
+            if msg.document:
+                await client.send_document(message.chat.id, file_path)
             elif msg.video:
-                await client.send_video(
-                    message.chat.id,
-                    file_path,
-                    thumb=thumbnail,  # HIGH QUALITY thumbnail
-                    caption=msg.caption or "🎥 **Video downloaded successfully!**",
-                    supports_streaming=True,
-                    progress=progress,
-                    progress_args=[download_msg, "up"]
-                )
-            elif msg.document:
-                # Check if document is a video file (MKV, MP4, etc)
-                if (msg.document.mime_type and 'video' in msg.document.mime_type) or \
-                   (msg.document.file_name and any(ext in msg.document.file_name.lower() for ext in ['.mp4', '.mkv', '.avi', '.mov', '.wmv'])):
-                    # Send video files as video for better preview with thumbnail
-                    await client.send_video(
-                        message.chat.id,
-                        file_path,
-                        thumb=thumbnail,  # HIGH QUALITY thumbnail
-                        caption=msg.caption or "🎥 **Video file downloaded successfully!**",
-                        supports_streaming=True,
-                        progress=progress,
-                        progress_args=[download_msg, "up"]
-                    )
-                else:
-                    # Send other documents normally
-                    await client.send_document(
-                        message.chat.id,
-                        file_path,
-                        thumb=thumbnail,  # HIGH QUALITY thumbnail
-                        caption=msg.caption or "📄 **Document downloaded successfully!**",
-                        progress=progress,
-                        progress_args=[download_msg, "up"]
-                    )
+                await client.send_video(message.chat.id, file_path)
+            elif msg.photo:
+                await client.send_photo(message.chat.id, file_path)
             elif msg.audio:
-                await client.send_audio(
-                    message.chat.id,
-                    file_path,
-                    thumb=thumbnail,  # HIGH QUALITY thumbnail
-                    caption=msg.caption or "🎵 **Audio downloaded successfully!**"
-                )
-            else:
-                await client.send_document(
-                    message.chat.id,
-                    file_path,
-                    thumb=thumbnail,  # HIGH QUALITY thumbnail
-                    caption=msg.caption or "📎 **File downloaded successfully!**"
-                )
+                await client.send_audio(message.chat.id, file_path)
             
-            await download_msg.edit("✅ **Download and upload completed!**")
+            # Clean up
+            await safe_delete_file(file_path)
             return True
             
-        finally:
-            # Cleanup tasks
-            status_task.cancel()
-            if upload_task:
-                upload_task.cancel()
+        except Exception:
+            return False
             
-            # Clean up status files
-            await safe_delete_file(status_file)
-            if upload_status_file:
-                await safe_delete_file(upload_status_file)
-                
-    except Exception as e:
-        logger.error(f"Error processing media: {e}")
-        if download_msg:
-            try:
-                await download_msg.edit("❌ **Processing failed!**")
-            except:
-                pass
+    except Exception:
         return False
-    finally:
-        # Clean up downloaded files
-        if file_path:
-            await safe_delete_file(file_path)
-        if thumbnail:
-            await safe_delete_file(thumbnail)
-
-@Client.on_message(filters.text & filters.private)
-async def save(client: Client, message: Message):
-    """Handle text messages with Telegram links"""
-    try:
-        await db.update_last_active(message.from_user.id)
-        
-        # Skip if message doesn't contain a Telegram link or is a command
-        if "https://t.me/" not in message.text or message.text.startswith('/'):
-            return
-            
-        # Validate it's actually a post link
-        if not is_valid_telegram_post_link(message.text.strip()):
-            await message.reply_text("❌ **Invalid Telegram link!**\n\nPlease send a valid Telegram post link.")
-            return
-            
-        # Check if another task is running
-        if BatchTemp.get_batch_state(message.from_user.id) == False:
-            await message.reply_text("⚠️ **Another task is already running!**\n\nPlease wait for it to complete or use /cancel to stop it.")
-            return
-        
-        # Parse the link
-        try:
-            datas = message.text.strip().split("/")
-            temp = datas[-1].replace("?single", "").split("-")
-            fromID = int(temp[0].strip())
-            try:
-                toID = int(temp[1].strip())
-            except:
-                toID = fromID
-        except Exception as e:
-            logger.error(f"Error parsing link: {e}")
-            await message.reply_text("❌ **Invalid link format!**")
-            return
-        
-        # Check batch size limit
-        batch_size = toID - fromID + 1
-        if batch_size > MAX_BATCH_SIZE:
-            await message.reply_text(f"❌ **Batch size too large!**\n\nMaximum {MAX_BATCH_SIZE} messages allowed at once.")
-            return
-        
-        BatchTemp.set_batch_state(message.from_user.id, False)
-        
-        # Process messages
-        processed = 0
-        failed = 0
-        
-        # Single message handling
-        if batch_size == 1:
-            success = await process_single_message(client, message, datas, fromID)
-            if success:
-                processed = 1
-            else:
-                failed = 1
-        else:
-            # Batch processing
-            status_msg = await message.reply_text(
-                f"📥 **Starting Batch Download**\n\n"
-                f"📊 **Range:** {fromID} to {toID}\n"
-                f"📝 **Total:** {batch_size} messages\n"
-                f"⏳ **Status:** Processing..."
-            )
-            
-            for i, msgid in enumerate(range(fromID, toID + 1)):
-                if BatchTemp.get_batch_state(message.from_user.id):
-                    break
-                
-                # Update progress every 5 messages
-                if i % 5 == 0 and batch_size > 5:
-                    try:
-                        await status_msg.edit(
-                            f"📥 **Batch Download in Progress**\n\n"
-                            f"📊 **Range:** {fromID} to {toID}\n"
-                            f"📝 **Total:** {batch_size} messages\n"
-                            f"✅ **Processed:** {processed}\n"
-                            f"❌ **Failed:** {failed}\n"
-                            f"⏳ **Current:** {msgid}"
-                        )
-                    except:
-                        pass
-                    
-                try:
-                    success = await process_single_message(client, message, datas, msgid)
-                    if success:
-                        processed += 1
-                    else:
-                        failed += 1
-                except Exception as e:
-                    logger.error(f"Failed to process message {msgid}: {e}")
-                    failed += 1
-                
-                # Small delay between messages
-                await asyncio.sleep(MINIMAL_DELAY)
-            
-            # Update final status
-            try:
-                await status_msg.edit(
-                    f"✅ **Batch Download Completed!**\n\n"
-                    f"📊 **Final Summary:**\n"
-                    f"✅ **Success:** {processed}\n"
-                    f"❌ **Failed:** {failed}\n"
-                    f"📝 **Total:** {processed + failed}/{batch_size}"
-                )
-            except:
-                pass
-        
-        # Reset batch state
-        BatchTemp.set_batch_state(message.from_user.id, True)
-        
-    except Exception as e:
-        logger.error(f"Error in save handler: {e}")
-        BatchTemp.set_batch_state(message.from_user.id, True)
-        await message.reply_text("❌ **An error occurred!** Please try again later.")
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
