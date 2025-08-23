@@ -14,7 +14,7 @@ API_HASH = os.environ.get("API_HASH", "")
 DB_URI = os.environ.get("DATABASE_URL", "")
 
 # Your database name
-DB_NAME = os.environ.get("DATABASE_NAME", "RTeleSwift")
+DB_NAME = os.environ.get("DATABASE_NAME", "")
 
 # Bot workers - number of concurrent workers for handling updates
 BOT_WORKERS = int(os.environ.get("BOT_WORKERS", "4"))
