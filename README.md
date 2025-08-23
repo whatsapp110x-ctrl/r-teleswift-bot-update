@@ -36,6 +36,7 @@ Telegram API ID and API Hash from my.telegram.org
 1. Clone the Repository
 
 git clone https://github.com/whatsapp110x-ctrl/r-teleswift-bot-update
+
 cd r-teleswift-bot-update
 
 2. Install Dependencies
