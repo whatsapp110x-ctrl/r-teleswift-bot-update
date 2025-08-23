@@ -1,7 +1,7 @@
 import os
 
 # Bot token @Botfather
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8336023566:AAGUg7Udgfc5_d4mGr6Mi3GEdzseNtGRS8c")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8007887534:AAHApmhsnQdaeZFK688phAHZAtl5-CL73Pw")
 
 # Your API ID from my.telegram.org
 API_ID = int(os.environ.get("API_ID", "11004381"))
@@ -17,7 +17,7 @@ ADMINS = int(os.environ.get("ADMINS", "7052170756"))
 DB_URI = os.environ.get("DB_URI", "mongodb+srv://whatsapp110x:whatsapp110x@cluster0.dh2ygtt.mongodb.net/sample_mflix?retryWrites=true&w=majority&appName=Cluster0")
 
 # Database name
-DB_NAME = os.environ.get("DB_NAME", "vj_save_bot")
+DB_NAME = os.environ.get("DB_NAME", "RTeleSwift")
 
 # Error message display toggle
 ERROR_MESSAGE = os.environ.get("ERROR_MESSAGE", "True").lower() == "true"
