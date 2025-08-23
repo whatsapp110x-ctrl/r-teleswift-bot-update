@@ -15,7 +15,7 @@ from config import API_ID, API_HASH, BOT_TOKEN, BOT_WORKERS, SLEEP_THRESHOLD
 # Apply nest_asyncio for compatibility
 nest_asyncio.apply()
 
-# Configure logging
+# Configure logging with better formatting
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -24,6 +24,10 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Suppress noisy logs
+logging.getLogger("pyrogram.crypto.aes").setLevel(logging.WARNING)
+logging.getLogger("pyrogram.session.session").setLevel(logging.WARNING)
 
 class Bot(Client):
     def __init__(self):
@@ -59,6 +63,7 @@ class Bot(Client):
     async def _init_database(self):
         """Initialize database in background to avoid blocking bot startup"""
         try:
+            await asyncio.sleep(1)  # Brief delay to let bot start
             from database.db import db
             db_success = await db.initialize()
             if db_success:
@@ -80,20 +85,22 @@ class Bot(Client):
             logger.error(f"Error stopping bot: {e}")
 
 async def main():
-    """Optimized main function"""
+    """Enhanced main function with better error handling"""
     bot = None
     try:
+        logger.info("Starting VJ Save Restricted Content Bot")
         bot = Bot()
         await bot.start()
         logger.info("Bot is running and ready to receive messages")
         
-        # Keep the bot running without excessive health checks
+        # Keep the bot running without excessive operations
         await asyncio.Event().wait()
         
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
     except Exception as e:
         logger.error(f"Bot error: {e}")
+        # Don't re-raise, just log and exit gracefully
         
     finally:
         if bot:
@@ -108,6 +115,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n🛑 Bot stopped by user")
     except Exception as e:
+        logger.error(f"Fatal Error: {e}")
         print(f"💥 Fatal Error: {e}")
 
 # Don't Remove Credit Tg - @VJ_Botz
