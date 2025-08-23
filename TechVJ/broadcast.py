@@ -39,20 +39,25 @@ async def broadcast_messages(user_id, message):
         logger.error(f"Broadcast error for user {user_id}: {e}")
         return False, "Error"
 
-@Client.on_message(filters.command("broadcast") & filters.user(ADMINS) & filters.reply)
+@Client.on_message(filters.command("broadcast") & filters.reply)
 async def broadcast_handler(bot, message):
-    """Handle broadcast command (Admin only) - FIXED"""
+    """Handle broadcast command (Admin only) - COMPLETELY FIXED"""
     try:
-        # Fix admin check - ADMINS is a list
-        if message.from_user.id not in ADMINS:
-            return await message.reply_text("❌ **Unauthorized!** Only admins can use this command.")
+        # FIXED: Proper admin check
+        user_id = message.from_user.id
+        if not ADMINS or user_id not in ADMINS:
+            return await message.reply_text(
+                "❌ **Unauthorized Access!**\n\n"
+                "🔐 Only bot admins can use the broadcast feature.\n"
+                "📞 Contact the bot owner if you think this is a mistake."
+            )
         
         # Get broadcast message
         b_msg = message.reply_to_message
         if not b_msg:
             return await message.reply_text(
                 "❌ **Reply Required!**\n\n"
-                "Please reply to the message you want to broadcast."
+                "Please reply to the message you want to broadcast to all users."
             )
         
         # Get all users
@@ -64,11 +69,11 @@ async def broadcast_handler(bot, message):
             logger.error(f"Database error in broadcast: {e}")
             return await message.reply_text("❌ **Database error!** Please try again later.")
         
-        # Start broadcast
+        # Start broadcast with enhanced status
         sts = await message.reply_text(
-            f"📡 **Starting Broadcast...**\n\n"
+            f"📡 **R-TeleSwiftBot💖 Broadcasting...**\n\n"
             f"👥 **Total Users:** {total_users}\n"
-            f"⏳ **Status:** Preparing..."
+            f"⏳ **Status:** Initializing ultra-fast broadcast..."
         )
         
         start_time = time.time()
@@ -78,11 +83,11 @@ async def broadcast_handler(bot, message):
         deleted = 0
         failed = 0
         
-        # Broadcast to all users
+        # Enhanced broadcast with better error handling
         try:
-            async for user in await db.get_all_users():
+            async for user in db.get_all_users():
                 try:
-                    if 'id' not in user:
+                    if not user or 'id' not in user:
                         done += 1
                         failed += 1
                         continue
@@ -102,24 +107,31 @@ async def broadcast_handler(bot, message):
                     
                     done += 1
                     
-                    # Update status every 10 users
+                    # Update status every 10 users with enhanced display
                     if done % 10 == 0:
                         try:
+                            percentage = (done/total_users)*100
+                            bar_length = 20
+                            filled_length = int(bar_length * done // total_users)
+                            bar = "🟩" * filled_length + "⬜" * (bar_length - filled_length)
+                            
                             await sts.edit(
-                                f"📡 **Broadcasting in Progress...**\n\n"
+                                f"📡 **R-TeleSwiftBot💖 Broadcasting...**\n\n"
                                 f"👥 **Total Users:** {total_users}\n"
+                                f"📊 **Progress:** {percentage:.1f}%\n\n"
+                                f"{bar}\n\n"
                                 f"✅ **Completed:** {done}/{total_users}\n"
                                 f"🎯 **Success:** {success}\n"
                                 f"🚫 **Blocked:** {blocked}\n"
                                 f"🗑️ **Deleted:** {deleted}\n"
                                 f"❌ **Failed:** {failed}\n\n"
-                                f"⏱️ **Progress:** {(done/total_users)*100:.1f}%"
+                                f"⚡ **Ultra-fast broadcasting in progress...**"
                             )
                         except Exception:
                             pass
                     
-                    # Small delay to prevent rate limiting
-                    await asyncio.sleep(0.05)
+                    # Minimal delay for ultra-fast broadcasting
+                    await asyncio.sleep(0.03)
                     
                 except Exception as e:
                     logger.error(f"Error processing user in broadcast: {e}")
@@ -134,18 +146,20 @@ async def broadcast_handler(bot, message):
         # Calculate completion time
         time_taken = datetime.timedelta(seconds=int(time.time() - start_time))
         
-        # Send final summary
+        # Enhanced final summary
         final_text = (
-            f"✅ **Broadcast Completed!**\n\n"
-            f"⏱️ **Time Taken:** {time_taken}\n\n"
-            f"📊 **Summary:**\n"
+            f"✅ **R-TeleSwiftBot💖 Broadcast Completed!**\n\n"
+            f"⏱️ **Time Taken:** {time_taken}\n"
+            f"⚡ **Speed:** {success/max(1, time_taken.total_seconds()):.1f} msg/sec\n\n"
+            f"📊 **Final Summary:**\n"
             f"👥 **Total Users:** {total_users}\n"
             f"✅ **Completed:** {done}/{total_users}\n"
             f"🎯 **Success:** {success}\n"
             f"🚫 **Blocked:** {blocked}\n"
             f"🗑️ **Deleted:** {deleted}\n"
             f"❌ **Failed:** {failed}\n\n"
-            f"📈 **Success Rate:** {(success/total_users)*100:.1f}%"
+            f"📈 **Success Rate:** {(success/total_users)*100:.1f}%\n\n"
+            f"💖 **Powered by R-TeleSwiftBot**"
         )
         
         await sts.edit(final_text)
@@ -160,39 +174,58 @@ async def broadcast_handler(bot, message):
         logger.error(f"Broadcast handler error: {e}")
         await message.reply_text("❌ **Broadcast failed!** An unexpected error occurred.")
 
-@Client.on_message(filters.command("broadcast") & ~filters.user(ADMINS))
-async def broadcast_unauthorized(bot, message):
-    """Handle unauthorized broadcast attempts - FIXED"""
+@Client.on_message(filters.command("broadcast") & ~filters.reply)
+async def broadcast_no_reply(bot, message):
+    """Handle broadcast command without reply - FIXED"""
+    user_id = message.from_user.id
+    if not ADMINS or user_id not in ADMINS:
+        return await message.reply_text(
+            "❌ **Unauthorized Access!**\n\n"
+            "🔐 Only bot admins can use the broadcast feature.\n"
+            "📞 Contact the bot owner if you think this is a mistake."
+        )
+    
     await message.reply_text(
-        "❌ **Unauthorized Access!**\n\n"
-        "🔐 Only bot admins can use the broadcast feature.\n"
-        "📞 Contact the bot owner if you think this is a mistake."
+        "📢 **R-TeleSwiftBot💖 Broadcast**\n\n"
+        "To broadcast a message:\n"
+        "1. Send or forward the message you want to broadcast\n"
+        "2. Reply to that message with `/broadcast`\n\n"
+        "✅ **Example:**\n"
+        "Message: Hello all users!\n"
+        "Reply: /broadcast"
     )
 
-@Client.on_message(filters.command("stats") & filters.user(ADMINS))
+@Client.on_message(filters.command("stats"))
 async def stats_handler(bot, message):
-    """Handle stats command (Admin only) - FIXED"""
+    """Handle stats command (Admin only) - ENHANCED"""
     try:
-        if message.from_user.id not in ADMINS:  # Fixed admin check
-            return await message.reply_text("❌ **Unauthorized!** Only admins can use this command.")
+        user_id = message.from_user.id
+        if not ADMINS or user_id not in ADMINS:
+            return await message.reply_text(
+                "❌ **Unauthorized!**\n\n"
+                "Only bot admins can view statistics."
+            )
         
         total_users = await db.total_users_count()
         
         # Get active sessions count
         active_sessions = 0
         try:
-            async for user in await db.get_all_users():
+            async for user in db.get_all_users():
                 if user.get('session'):
                     active_sessions += 1
         except:
             active_sessions = "Error"
         
+        # Enhanced stats display
         stats_text = (
-            f"📊 **Bot Statistics**\n\n"
+            f"📊 **R-TeleSwiftBot💖 Statistics**\n\n"
             f"👥 **Total Users:** {total_users}\n"
             f"🔑 **Active Sessions:** {active_sessions}\n"
-            f"🤖 **Bot Status:** Online\n"
-            f"💾 **Database:** Connected"
+            f"🤖 **Bot Status:** Online & Ultra-Fast\n"
+            f"💾 **Database:** Connected\n"
+            f"⚡ **Performance:** Optimized\n"
+            f"💖 **Version:** 2.0.0"
         )
         
         await message.reply_text(stats_text)
