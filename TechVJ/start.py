@@ -90,27 +90,59 @@ async def ultra_fast_download(acc, msg, message, max_retries=MAX_RETRIES):
             else:
                 raise e
 
-async def get_ultra_hd_thumbnail(acc, media_obj):
-    """Get the highest quality thumbnail available"""
+async def get_ultra_hd_thumbnail(acc, msg):
+    """Get the highest quality thumbnail available - FIXED FOR HIGH QUALITY"""
     try:
-        if hasattr(media_obj, 'thumbs') and media_obj.thumbs:
-            # Sort thumbnails by size to get the largest (highest quality)
-            best_thumb = None
+        thumbnail_path = None
+        
+        # For videos - Extract highest quality thumbnail
+        if msg.video and hasattr(msg.video, 'thumbs') and msg.video.thumbs:
+            largest_thumb = None
             max_size = 0
             
-            for thumb in media_obj.thumbs:
+            for thumb in msg.video.thumbs:
                 if hasattr(thumb, 'width') and hasattr(thumb, 'height'):
-                    thumb_size = thumb.width * thumb.height
-                    if thumb_size > max_size:
-                        max_size = thumb_size
-                        best_thumb = thumb
+                    size = thumb.width * thumb.height
+                    if size > max_size:
+                        max_size = size
+                        largest_thumb = thumb
             
-            if best_thumb:
-                logger.info(f"Downloading ultra HD thumbnail: {best_thumb.width}x{best_thumb.height}")
-                return await acc.download_media(best_thumb.file_id)
+            if largest_thumb:
+                logger.info(f"Downloading HD video thumbnail: {largest_thumb.width}x{largest_thumb.height}")
+                thumbnail_path = await acc.download_media(largest_thumb.file_id)
+                
+        # For documents (MKV, MP4 files) - Extract highest quality thumbnail  
+        elif msg.document and hasattr(msg.document, 'thumbs') and msg.document.thumbs:
+            largest_thumb = None
+            max_size = 0
+            
+            for thumb in msg.document.thumbs:
+                if hasattr(thumb, 'width') and hasattr(thumb, 'height'):
+                    size = thumb.width * thumb.height
+                    if size > max_size:
+                        max_size = size
+                        largest_thumb = thumb
+            
+            if largest_thumb:
+                logger.info(f"Downloading HD document thumbnail: {largest_thumb.width}x{largest_thumb.height}")
+                thumbnail_path = await acc.download_media(largest_thumb.file_id)
+        
+        # For photos - Get highest resolution
+        elif msg.photo and hasattr(msg.photo, 'sizes') and msg.photo.sizes:
+            largest_size = max(msg.photo.sizes, key=lambda x: x.width * x.height)
+            logger.info(f"Downloading HD photo: {largest_size.width}x{largest_size.height}")
+            thumbnail_path = await acc.download_media(largest_size.file_id)
+        
+        if thumbnail_path and os.path.exists(thumbnail_path):
+            logger.info(f"Successfully downloaded HD thumbnail: {thumbnail_path}")
+            return thumbnail_path
+        else:
+            logger.warning("No thumbnail available")
+            return None
+            
     except Exception as e:
-        logger.error(f"Error getting ultra HD thumbnail: {e}")
-    return None
+        logger.error(f"Error getting HD thumbnail: {e}")
+        return None
 
 async def create_client_with_retry(user_data):
     """Create and connect client with retry mechanism"""
@@ -268,9 +300,18 @@ async def process_single_message(client, message, datas, msgid):
         else:
             chat_id = datas[3]
         
-        # Get message - FIXED: Handle single message properly
+        # Get message - FIXED: Handle list properly
         try:
-            msg = await acc.get_messages(chat_id, msgid)
+            messages = await acc.get_messages(chat_id, msgid)
+            
+            # Handle single message or list
+            if isinstance(messages, list):
+                if len(messages) == 0:
+                    logger.warning(f"No messages found for ID {msgid}")
+                    return False
+                msg = messages[0]
+            else:
+                msg = messages
             
             # Check if message exists and is not empty
             if not msg or (hasattr(msg, 'empty') and msg.empty):
@@ -307,10 +348,12 @@ async def process_single_message(client, message, datas, msgid):
                 pass
 
 async def process_media_message(client, message, acc, msg):
-    """Process media message for download and upload"""
+    """Process media message with HIGH QUALITY THUMBNAILS - FIXED"""
     file_path = None
     thumbnail = None
     download_msg = None
+    upload_status_file = None
+    upload_task = None
     
     try:
         # Check file size
@@ -338,8 +381,8 @@ async def process_media_message(client, message, acc, msg):
                 await download_msg.edit("❌ **Download failed!**")
                 return False
             
-            # Get thumbnail if available
-            thumbnail = await get_ultra_hd_thumbnail(acc, msg.media)
+            # Get HIGH QUALITY thumbnail - MAIN FIX HERE
+            thumbnail = await get_ultra_hd_thumbnail(acc, msg)
             
             # Upload file
             await download_msg.edit("⚡ **Starting ultra-fast upload...**")
@@ -349,7 +392,7 @@ async def process_media_message(client, message, acc, msg):
                 upstatus(client, upload_status_file, download_msg, message.chat.id)
             )
             
-            # Determine file type and upload accordingly
+            # Upload with HIGH QUALITY thumbnails based on media type
             if msg.photo:
                 await client.send_photo(
                     message.chat.id,
@@ -360,32 +403,48 @@ async def process_media_message(client, message, acc, msg):
                 await client.send_video(
                     message.chat.id,
                     file_path,
-                    thumb=thumbnail,
+                    thumb=thumbnail,  # HIGH QUALITY thumbnail
                     caption=msg.caption or "🎥 **Video downloaded successfully!**",
                     supports_streaming=True,
                     progress=progress,
                     progress_args=[download_msg, "up"]
                 )
             elif msg.document:
-                await client.send_document(
-                    message.chat.id,
-                    file_path,
-                    thumb=thumbnail,
-                    caption=msg.caption or "📄 **Document downloaded successfully!**",
-                    progress=progress,
-                    progress_args=[download_msg, "up"]
-                )
+                # Check if document is a video file (MKV, MP4, etc)
+                if (msg.document.mime_type and 'video' in msg.document.mime_type) or \
+                   (msg.document.file_name and any(ext in msg.document.file_name.lower() for ext in ['.mp4', '.mkv', '.avi', '.mov', '.wmv'])):
+                    # Send video files as video for better preview with thumbnail
+                    await client.send_video(
+                        message.chat.id,
+                        file_path,
+                        thumb=thumbnail,  # HIGH QUALITY thumbnail
+                        caption=msg.caption or "🎥 **Video file downloaded successfully!**",
+                        supports_streaming=True,
+                        progress=progress,
+                        progress_args=[download_msg, "up"]
+                    )
+                else:
+                    # Send other documents normally
+                    await client.send_document(
+                        message.chat.id,
+                        file_path,
+                        thumb=thumbnail,  # HIGH QUALITY thumbnail
+                        caption=msg.caption or "📄 **Document downloaded successfully!**",
+                        progress=progress,
+                        progress_args=[download_msg, "up"]
+                    )
             elif msg.audio:
                 await client.send_audio(
                     message.chat.id,
                     file_path,
-                    thumb=thumbnail,
+                    thumb=thumbnail,  # HIGH QUALITY thumbnail
                     caption=msg.caption or "🎵 **Audio downloaded successfully!**"
                 )
             else:
                 await client.send_document(
                     message.chat.id,
                     file_path,
+                    thumb=thumbnail,  # HIGH QUALITY thumbnail
                     caption=msg.caption or "📎 **File downloaded successfully!**"
                 )
             
@@ -395,12 +454,12 @@ async def process_media_message(client, message, acc, msg):
         finally:
             # Cleanup tasks
             status_task.cancel()
-            if 'upload_task' in locals():
+            if upload_task:
                 upload_task.cancel()
             
             # Clean up status files
             await safe_delete_file(status_file)
-            if 'upload_status_file' in locals():
+            if upload_status_file:
                 await safe_delete_file(upload_status_file)
                 
     except Exception as e:
