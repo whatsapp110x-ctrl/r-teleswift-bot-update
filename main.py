@@ -11,6 +11,10 @@ import asyncio
 import threading
 import signal
 from concurrent.futures import ThreadPoolExecutor
+import nest_asyncio
+
+# Apply nest_asyncio to allow nested event loops
+nest_asyncio.apply()
 
 # Configure logging
 logging.basicConfig(
@@ -36,19 +40,28 @@ def run_flask_app():
         logger.error(f"Flask app error: {e}")
         raise
 
-async def run_telegram_bot():
-    """Run Telegram bot"""
+def run_telegram_bot():
+    """Run Telegram bot in separate thread with proper event loop"""
     try:
-        # Small delay to ensure Flask starts first
-        await asyncio.sleep(2)
+        import time
+        time.sleep(3)  # Give Flask time to start
         
-        from bot import main as bot_main
-        logger.info("Starting Telegram bot")
-        await bot_main()
+        # Create new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            # Import and run bot
+            from bot import main as bot_main
+            logger.info("Starting Telegram bot in separate thread")
+            loop.run_until_complete(bot_main())
+        except Exception as e:
+            logger.error(f"Bot error in thread: {e}")
+        finally:
+            loop.close()
         
     except Exception as e:
-        logger.error(f"Telegram bot error: {e}")
-        raise
+        logger.error(f"Bot thread error: {e}")
 
 def signal_handler(signum, frame):
     """Handle shutdown signals"""
@@ -57,23 +70,6 @@ def signal_handler(signum, frame):
 
 # For Gunicorn, expose the Flask app directly
 from app import app
-
-def start_bot_background():
-    """Start the Telegram bot in background"""
-    try:
-        import time
-        time.sleep(5)  # Give Flask time to start
-        
-        # Create event loop for the bot
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        # Run Telegram bot
-        logger.info("Starting Telegram bot in background")
-        loop.run_until_complete(run_telegram_bot())
-        
-    except Exception as e:
-        logger.error(f"Bot background error: {e}")
 
 def main():
     """Main function to run both Flask and Telegram bot"""
@@ -87,7 +83,7 @@ def main():
         logger.info(f"Environment: {'Production' if os.environ.get('RENDER') else 'Development'}")
         
         # Start Telegram bot in background thread
-        bot_thread = threading.Thread(target=start_bot_background, daemon=True)
+        bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
         bot_thread.start()
         logger.info("Bot thread started in background")
         
