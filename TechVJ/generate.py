@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @Client.on_message(filters.private & ~filters.forwarded & filters.command(["logout"]))
 async def logout(client, message):
-    """Handle logout command"""
+    """Handle logout command - optimized"""
     try:
         await db.update_last_active(message.from_user.id)
         user_data = await db.get_session(message.from_user.id)  
@@ -35,18 +35,18 @@ async def logout(client, message):
         
         success = await db.set_session(message.from_user.id, session=None)
         if success:
-            await message.reply("✅ **Logout Successful!** 🔓\n\nYour session has been removed from our database.")
+            await message.reply("✅ **Logout Successful!** 🔓\n\nYour session has been removed.")
             logger.info(f"User {message.from_user.id} logged out successfully")
         else:
-            await message.reply_text("❌ **Logout failed!** Please try again later.")
+            await message.reply_text("❌ **Logout failed!** Please try again.")
             
     except Exception as e:
         logger.error(f"Error in logout: {e}")
-        await message.reply_text("❌ An error occurred during logout. Please try again later.")
+        await message.reply_text("❌ An error occurred during logout.")
 
 @Client.on_message(filters.private & ~filters.forwarded & filters.command(["login"]))
 async def main(bot: Client, message: Message):
-    """Handle login command"""
+    """Handle login command - optimized version"""
     try:
         await db.update_last_active(message.from_user.id)
         
@@ -61,14 +61,14 @@ async def main(bot: Client, message: Message):
         # Send login instructions
         await message.reply_text(LOGIN_HELP)
         
-        # Ask for phone number
+        # Ask for phone number with reduced timeout
         try:
             phone_number_msg = await bot.ask(
                 chat_id=user_id, 
                 text="📱 **Please send your phone number**\n\n"
                      "Include country code (e.g., +1234567890)\n\n"
                      "Enter `/cancel` to cancel the process",
-                timeout=USER_INPUT_TIMEOUT
+                timeout=60  # Reduced from USER_INPUT_TIMEOUT
             )
         except TimeoutError:
             return await message.reply_text("⏰ **Login timeout!** Please try `/login` again.")
@@ -82,8 +82,14 @@ async def main(bot: Client, message: Message):
         if not phone_number.startswith('+') or len(phone_number) < 10:
             return await phone_number_msg.reply("❌ **Invalid phone number format!**\n\nPlease include country code (e.g., +1234567890)")
         
-        # Create client and connect
-        client = Client(":memory:", API_ID, API_HASH)
+        # Create client with optimized settings
+        client = Client(
+            ":memory:", 
+            API_ID, 
+            API_HASH,
+            device_model="VJ Bot",
+            system_version="1.0"
+        )
         await client.connect()
         
         await phone_number_msg.reply("📤 **Sending OTP...**")
@@ -97,9 +103,9 @@ async def main(bot: Client, message: Message):
         except Exception as e:
             await client.disconnect()
             logger.error(f"Error sending code: {e}")
-            return await phone_number_msg.reply('❌ **Failed to send OTP!** Please try again later.')
+            return await phone_number_msg.reply('❌ **Failed to send OTP!** Please try again.')
         
-        # Ask for OTP
+        # Ask for OTP with reduced timeout
         try:
             phone_code_msg = await bot.ask(
                 user_id, 
@@ -108,7 +114,7 @@ async def main(bot: Client, message: Message):
                 "If OTP is `12345`, send it as `1 2 3 4 5` (with spaces)\n\n"
                 "Enter `/cancel` to cancel the process", 
                 filters=filters.text, 
-                timeout=USER_INPUT_TIMEOUT
+                timeout=90  # Reduced timeout
             )
         except TimeoutError:
             await client.disconnect()
@@ -134,7 +140,7 @@ async def main(bot: Client, message: Message):
             await client.disconnect()
             return await phone_code_msg.reply('❌ **OTP expired!** Please try `/login` again.')
         except SessionPasswordNeeded:
-            # Handle 2FA
+            # Handle 2FA with reduced timeout
             try:
                 two_step_msg = await bot.ask(
                     user_id, 
@@ -142,7 +148,7 @@ async def main(bot: Client, message: Message):
                     'Your account has 2FA enabled. Please enter your password.\n\n'
                     'Enter `/cancel` to cancel the process', 
                     filters=filters.text, 
-                    timeout=USER_INPUT_TIMEOUT
+                    timeout=60  # Reduced timeout
                 )
             except TimeoutError:
                 await client.disconnect()
@@ -166,7 +172,7 @@ async def main(bot: Client, message: Message):
         except Exception as e:
             await client.disconnect()
             logger.error(f"Sign in error: {e}")
-            return await phone_code_msg.reply('❌ **Login failed!** Please try again later.')
+            return await phone_code_msg.reply('❌ **Login failed!** Please try again.')
         
         # Export session string
         try:
@@ -181,17 +187,30 @@ async def main(bot: Client, message: Message):
         if len(string_session) < SESSION_STRING_SIZE:
             return await message.reply_text('❌ **Invalid session string!** Please try again.')
         
-        # Test the session
+        # Test the session quickly
         try:
             test_client = Client(":memory:", session_string=string_session, api_id=API_ID, api_hash=API_HASH)
             await test_client.connect()
             me = await test_client.get_me()
             await test_client.disconnect()
             
-            # Save session to database
-            success = await db.set_session(message.from_user.id, session=string_session)
+            # Save session to database with retry
+            max_retries = 3
+            success = False
+            for attempt in range(max_retries):
+                try:
+                    success = await db.set_session(message.from_user.id, session=string_session)
+                    if success:
+                        break
+                    logger.warning(f"Session save attempt {attempt + 1} failed")
+                except Exception as save_error:
+                    logger.error(f"Session save error (attempt {attempt + 1}): {save_error}")
+                
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)  # Brief delay between retries
+            
             if not success:
-                return await message.reply_text('❌ **Failed to save session!** Please try again.')
+                return await message.reply_text('❌ **Failed to save session!** Database issue detected. Please try again.')
             
             await bot.send_message(
                 message.from_user.id, 
