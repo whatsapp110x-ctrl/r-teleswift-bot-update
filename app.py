@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Create Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "vj_save_bot_secret_key_2024")
+app.secret_key = os.environ.get("SESSION_SECRET", "r_teleswift_bot_secret_key_2024")
 
 # Keep-alive tracking
 last_activity = datetime.utcnow()
@@ -29,7 +29,7 @@ def index():
         'status': 'healthy',
         'service': 'R-TeleSwiftBot💖',
         'message': 'R-TeleSwiftBot💖 is Running! 🤖',
-        'version': '1.0.0',
+        'version': '2.0.0',
         'uptime': str(datetime.utcnow() - last_activity)
     }
 
@@ -83,8 +83,9 @@ def status():
             'features': [
                 'Session Management',
                 'Restricted Content Download',
-                'Batch Operations',
-                'Broadcasting'
+                'Serial Batch Operations',
+                'Broadcasting',
+                'Ultra High Speed Downloads'
             ]
         })
     except Exception as e:
