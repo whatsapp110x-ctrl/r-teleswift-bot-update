@@ -10,7 +10,8 @@ API_ID = int(os.environ.get("API_ID", "12345"))
 API_HASH = os.environ.get("API_HASH", "")
 
 # Your database URI from mongodb
-DB_URI = os.environ.get("DATABASE_URL", "")
+# If not provided, bot will run in limited mode
+DB_URI = os.environ.get("DATABASE_URL", "mongodb://localhost:27017")
 
 # Your database name
 DB_NAME = os.environ.get("DATABASE_NAME", "techvj_bot")
@@ -62,54 +63,3 @@ ADMINS = [int(x) for x in os.environ.get("ADMINS", "").split(",") if x.strip()]
 
 # Force subscribe channel (optional)
 FORCE_SUB_CHANNEL = os.environ.get("FORCE_SUB_CHANNEL", "")
-
-# Start message
-START_MSG = os.environ.get("START_MSG", """
-🎉 **Welcome to VJ Save Restricted Content Bot!** 
-
-📱 **How to use:**
-1. Send me any Telegram post link
-2. I'll download and send the content to you
-3. For batch downloads, use range format: `link/start-end`
-
-✨ **Features:**
-• Single post download
-• Bulk/batch download
-• High-quality media downloads
-• Fast and reliable
-
-👨‍💻 **Developer:** @VJ_Botz
-🔥 **Channel:** @Tech_VJ
-
-Send me a Telegram link to get started!
-""")
-
-# Help message
-HELP_MSG = os.environ.get("HELP_MSG", """
-📖 **Help & Commands**
-
-**Commands:**
-• `/start` - Start the bot
-• `/help` - Show this help message
-• `/login` - Login with your Telegram account
-• `/logout` - Logout from your account
-• `/cancel` - Cancel current operation
-
-**How to use:**
-1. Login with `/login` command first
-2. Send any Telegram post link
-3. For single post: `https://t.me/channel/123`
-4. For batch: `https://t.me/channel/123-130`
-
-**Link formats supported:**
-• `https://t.me/username/123`
-• `https://t.me/c/123456789/123`
-• `https://t.me/b/123456789_123/123`
-
-**Batch download:**
-• Use format: `link/start-end`
-• Max batch size: 50 messages
-• Example: `https://t.me/channel/100-150`
-
-Need help? Contact: @VJ_Botz
-""")
