@@ -41,10 +41,10 @@ async def broadcast_messages(user_id, message):
 
 @Client.on_message(filters.command("broadcast") & filters.user(ADMINS) & filters.reply)
 async def broadcast_handler(bot, message):
-    """Handle broadcast command (Admin only)"""
+    """Handle broadcast command (Admin only) - FIXED"""
     try:
-        # Validate admin
-        if message.from_user.id != ADMINS:
+        # Fix admin check - ADMINS is a list
+        if message.from_user.id not in ADMINS:
             return await message.reply_text("❌ **Unauthorized!** Only admins can use this command.")
         
         # Get broadcast message
@@ -57,14 +57,12 @@ async def broadcast_handler(bot, message):
         
         # Get all users
         try:
-            users = await db.get_all_users()
             total_users = await db.total_users_count()
+            if total_users == 0:
+                return await message.reply_text("❌ **No users found!** The bot has no users to broadcast to.")
         except Exception as e:
             logger.error(f"Database error in broadcast: {e}")
             return await message.reply_text("❌ **Database error!** Please try again later.")
-        
-        if total_users == 0:
-            return await message.reply_text("❌ **No users found!** The bot has no users to broadcast to.")
         
         # Start broadcast
         sts = await message.reply_text(
@@ -82,7 +80,7 @@ async def broadcast_handler(bot, message):
         
         # Broadcast to all users
         try:
-            async for user in users:
+            async for user in await db.get_all_users():
                 try:
                     if 'id' not in user:
                         done += 1
@@ -104,8 +102,8 @@ async def broadcast_handler(bot, message):
                     
                     done += 1
                     
-                    # Update status every 20 users
-                    if done % 20 == 0:
+                    # Update status every 10 users
+                    if done % 10 == 0:
                         try:
                             await sts.edit(
                                 f"📡 **Broadcasting in Progress...**\n\n"
@@ -117,11 +115,11 @@ async def broadcast_handler(bot, message):
                                 f"❌ **Failed:** {failed}\n\n"
                                 f"⏱️ **Progress:** {(done/total_users)*100:.1f}%"
                             )
-                        except:
+                        except Exception:
                             pass
                     
                     # Small delay to prevent rate limiting
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.05)
                     
                 except Exception as e:
                     logger.error(f"Error processing user in broadcast: {e}")
@@ -164,7 +162,7 @@ async def broadcast_handler(bot, message):
 
 @Client.on_message(filters.command("broadcast") & ~filters.user(ADMINS))
 async def broadcast_unauthorized(bot, message):
-    """Handle unauthorized broadcast attempts"""
+    """Handle unauthorized broadcast attempts - FIXED"""
     await message.reply_text(
         "❌ **Unauthorized Access!**\n\n"
         "🔐 Only bot admins can use the broadcast feature.\n"
@@ -173,9 +171,9 @@ async def broadcast_unauthorized(bot, message):
 
 @Client.on_message(filters.command("stats") & filters.user(ADMINS))
 async def stats_handler(bot, message):
-    """Handle stats command (Admin only)"""
+    """Handle stats command (Admin only) - FIXED"""
     try:
-        if message.from_user.id != ADMINS:
+        if message.from_user.id not in ADMINS:  # Fixed admin check
             return await message.reply_text("❌ **Unauthorized!** Only admins can use this command.")
         
         total_users = await db.total_users_count()
