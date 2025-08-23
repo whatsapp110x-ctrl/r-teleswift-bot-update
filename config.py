@@ -13,7 +13,6 @@ API_HASH = os.environ.get("API_HASH", "")
 ADMINS = int(os.environ.get("ADMINS", ""))
 
 # Your Mongodb Database Url
-# Warning - Give Db uri in deploy server environment variable, don't give in repo.
 DB_URI = os.environ.get("DB_URI", "")
 
 # Database name
@@ -25,33 +24,37 @@ ERROR_MESSAGE = os.environ.get("ERROR_MESSAGE", "True").lower() == "true"
 # Session string size validation
 SESSION_STRING_SIZE = 351
 
-# EXTREME SPEED OPTIMIZATIONS - No waiting time
-PROGRESS_UPDATE_INTERVAL = 1  # Ultra-fast progress updates
-MAX_BATCH_SIZE = 1000  # Maximum batch size for power users
-USER_INPUT_TIMEOUT = 600
-MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024
+# OPTIMIZED PERFORMANCE SETTINGS
+PROGRESS_UPDATE_INTERVAL = 2  # Reasonable progress updates
+MAX_BATCH_SIZE = 100  # Reduced for stability
+USER_INPUT_TIMEOUT = 300  # 5 minutes timeout
+MAX_FILE_SIZE = 1.5 * 1024 * 1024 * 1024  # 1.5GB limit
 
-# MAXIMUM PERFORMANCE SETTINGS
-DOWNLOAD_CHUNK_SIZE = 2 * 1024 * 1024  # 2MB chunks for maximum speed
-MAX_CONCURRENT_DOWNLOADS = 20  # Double concurrent downloads
-CONNECTION_TIMEOUT = 60  # Longer timeout to prevent drops
-MAX_RETRIES = 3  # Faster retries
-RETRY_DELAY = 0.5  # Minimal retry delay
+# STABLE PERFORMANCE SETTINGS
+DOWNLOAD_CHUNK_SIZE = 1024 * 1024  # 1MB chunks
+MAX_CONCURRENT_DOWNLOADS = 5  # Reduced for stability
+CONNECTION_TIMEOUT = 120  # 2 minutes timeout
+MAX_RETRIES = 5  # More retries
+RETRY_DELAY = 2  # 2 second delay between retries
 
-# EXTREME BOT PERFORMANCE
-BOT_WORKERS = 200  # Maximum workers for ultimate speed
-SLEEP_THRESHOLD = 1  # Minimal sleep threshold
-CONNECTION_POOL_SIZE = 20  # Large connection pool
+# BALANCED BOT PERFORMANCE
+BOT_WORKERS = 50  # Reduced workers for stability
+SLEEP_THRESHOLD = 60  # Higher threshold to prevent rate limits
+CONNECTION_POOL_SIZE = 10  # Smaller connection pool
 
 # Thumbnail quality settings
-THUMBNAIL_QUALITY = 95  # Maximum HD thumbnail quality
-THUMBNAIL_MAX_SIZE = 2560  # 2K resolution thumbnails
+THUMBNAIL_QUALITY = 85  # Good quality
+THUMBNAIL_MAX_SIZE = 1920  # Full HD thumbnails
 
-# SPEED OPTIMIZATION CONSTANTS
-MINIMAL_DELAY = 0.01  # Absolute minimum delay
-UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1MB upload chunks
-PROGRESS_THROTTLE = 0.5  # Progress update throttling
+# STABILITY CONSTANTS
+MINIMAL_DELAY = 0.1  # Small delay
+UPLOAD_CHUNK_SIZE = 512 * 1024  # 512KB upload chunks
+PROGRESS_THROTTLE = 1  # 1 second progress throttling
 
 # Flask and deployment settings
 PORT = int(os.environ.get("PORT", 5000))
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+
+# Session management
+SESSION_TIMEOUT = 3600  # 1 hour session timeout
+SESSION_CLEANUP_INTERVAL = 300  # 5 minutes cleanup interval
