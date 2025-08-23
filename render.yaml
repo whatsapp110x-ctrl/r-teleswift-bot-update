@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: vj-save-bot
+    env: python
+    plan: free
+    buildCommand: echo "No build required"
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      - key: PORT
+        generateValue: true
+      - key: RENDER
+        value: true
+    healthCheckPath: /health
+    disk:
+      name: vj-save-bot-disk
+      mountPath: /tmp
+      sizeGB: 1
