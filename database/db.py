@@ -309,3 +309,4 @@ except Exception as e:
     
     db = EmergencyDatabase()
     logger.info("Emergency database fallback activated")
+            
