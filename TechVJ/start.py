@@ -372,34 +372,115 @@ async def ultra_fast_download(acc, msg, status_msg, user_id):
     return None
 
 async def get_optimized_thumbnail(acc, msg):
-    """Get optimized thumbnail with ultra-fast processing"""
+    """Get optimized thumbnail with ultra-fast processing - COMPLETELY FIXED"""
     try:
         thumbnail_path = None
         
-        # Quick thumbnail extraction with shorter timeout
+        # Video thumbnail
         if msg.video and hasattr(msg.video, 'thumbs') and msg.video.thumbs:
-            largest_thumb = max(msg.video.thumbs, key=lambda x: getattr(x, 'file_size', 0))
-            thumbnail_path = await asyncio.wait_for(
-                acc.download_media(largest_thumb.file_id),
-                timeout=15.0
-            )
-        elif msg.document and hasattr(msg.document, 'thumbs') and msg.document.thumbs:
-            largest_thumb = max(msg.document.thumbs, key=lambda x: getattr(x, 'file_size', 0))
-            thumbnail_path = await asyncio.wait_for(
-                acc.download_media(largest_thumb.file_id),
-                timeout=15.0
-            )
-        elif msg.photo:
-            thumbnail_path = await asyncio.wait_for(
-                acc.download_media(msg.photo.file_id),
-                timeout=15.0
-            )
+            try:
+                largest_thumb = max(msg.video.thumbs, key=lambda x: getattr(x, 'file_size', 0))
+                thumbnail_path = await asyncio.wait_for(
+                    acc.download_media(largest_thumb.file_id),
+                    timeout=15.0
+                )
+                logger.info(f"Video thumbnail downloaded successfully: {thumbnail_path}")
+            except Exception as e:
+                logger.warning(f"Video thumbnail download failed: {e}")
         
-        return thumbnail_path if thumbnail_path and os.path.exists(thumbnail_path) else None
+        # Document thumbnail  
+        elif msg.document and hasattr(msg.document, 'thumbs') and msg.document.thumbs:
+            try:
+                largest_thumb = max(msg.document.thumbs, key=lambda x: getattr(x, 'file_size', 0))
+                thumbnail_path = await asyncio.wait_for(
+                    acc.download_media(largest_thumb.file_id),
+                    timeout=15.0
+                )
+                logger.info(f"Document thumbnail downloaded successfully: {thumbnail_path}")
+            except Exception as e:
+                logger.warning(f"Document thumbnail download failed: {e}")
+        
+        # Audio thumbnail
+        elif msg.audio and hasattr(msg.audio, 'thumbs') and msg.audio.thumbs:
+            try:
+                largest_thumb = max(msg.audio.thumbs, key=lambda x: getattr(x, 'file_size', 0))
+                thumbnail_path = await asyncio.wait_for(
+                    acc.download_media(largest_thumb.file_id),
+                    timeout=15.0
+                )
+                logger.info(f"Audio thumbnail downloaded successfully: {thumbnail_path}")
+            except Exception as e:
+                logger.warning(f"Audio thumbnail download failed: {e}")
+        
+        # Photo - use a smaller resolution as thumbnail
+        elif msg.photo:
+            try:
+                # For photos, download the smallest size as thumbnail
+                if hasattr(msg.photo, 'file_size') and msg.photo.file_size > 0:
+                    thumbnail_path = await asyncio.wait_for(
+                        acc.download_media(msg.photo.file_id),
+                        timeout=15.0
+                    )
+                    logger.info(f"Photo thumbnail created successfully: {thumbnail_path}")
+            except Exception as e:
+                logger.warning(f"Photo thumbnail creation failed: {e}")
+        
+        # Verify thumbnail
+        if thumbnail_path and os.path.exists(thumbnail_path) and os.path.getsize(thumbnail_path) > 0:
+            return thumbnail_path
+        else:
+            logger.info("No valid thumbnail generated")
+            return None
             
     except Exception as e:
         logger.error(f"Error getting thumbnail: {e}")
         return None
+
+def get_file_caption(msg, original_caption=None):
+    """Generate proper caption for file with original caption preservation"""
+    try:
+        # Start with bot signature
+        bot_caption = "📥 **Downloaded via R-TeleSwiftBot💖**"
+        
+        # Add original caption if exists
+        if msg.caption and msg.caption.strip():
+            original_text = msg.caption.strip()
+            # Limit caption length to avoid Telegram limits
+            if len(original_text) > 800:
+                original_text = original_text[:800] + "..."
+            bot_caption += f"\n\n**Original Caption:**\n{original_text}"
+        
+        # Add file info
+        file_info = ""
+        if msg.video:
+            duration = msg.video.duration or 0
+            size_mb = (msg.video.file_size or 0) / (1024 * 1024)
+            file_info = f"\n\n🎬 **Duration:** {duration//60}:{duration%60:02d}\n📊 **Size:** {size_mb:.1f} MB"
+        elif msg.document:
+            size_mb = (msg.document.file_size or 0) / (1024 * 1024)
+            file_name = getattr(msg.document, 'file_name', 'Unknown')
+            file_info = f"\n\n📄 **File:** {file_name}\n📊 **Size:** {size_mb:.1f} MB"
+        elif msg.audio:
+            duration = msg.audio.duration or 0
+            size_mb = (msg.audio.file_size or 0) / (1024 * 1024)
+            title = getattr(msg.audio, 'title', 'Unknown')
+            performer = getattr(msg.audio, 'performer', 'Unknown')
+            file_info = f"\n\n🎵 **Title:** {title}\n🎤 **Artist:** {performer}\n⏱️ **Duration:** {duration//60}:{duration%60:02d}\n📊 **Size:** {size_mb:.1f} MB"
+        elif msg.photo:
+            size_mb = (msg.photo.file_size or 0) / (1024 * 1024)
+            file_info = f"\n\n🖼️ **Photo**\n📊 **Size:** {size_mb:.1f} MB"
+        
+        final_caption = bot_caption + file_info
+        
+        # Ensure caption doesn't exceed Telegram's limit
+        if len(final_caption) > 1024:
+            final_caption = final_caption[:1021] + "..."
+        
+        return final_caption
+        
+    except Exception as e:
+        logger.error(f"Caption generation error: {e}")
+        return "📥 **Downloaded via R-TeleSwiftBot💖**"
 
 # Add cancel command handler
 @Client.on_message(filters.command("cancel") & filters.private)
@@ -426,157 +507,194 @@ async def cancel_handler(bot, message):
         logger.error(f"Cancel handler error: {e}")
         await message.reply_text("❌ **Error processing cancel request**")
 
-@Client.on_message(filters.command("start") & filters.private)
-async def start_message(bot, message):
-    """Handle start command"""
+@Client.on_message(filters.command("start") & filters.private & ~filters.forwarded)
+async def start(client, message):
+    """Enhanced start command with beautiful interface - MODIFIED"""
     try:
         await db.update_last_active(message.from_user.id)
         
+        # Add user to database if not exists
         if not await db.is_user_exist(message.from_user.id):
-            await db.add_user(message.from_user.id, message.from_user.first_name)
-            logger.info(f"New user added: {message.from_user.id}")
+            await db.add_user(message.from_user.id, message.from_user.first_name or "User")
+            logger.info(f"New user started bot: {message.from_user.id}")
         
-        start_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💖 Help", callback_data="help"),
-             InlineKeyboardButton("🔐 Login", callback_data="login")],
-            [InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/fightermonk110")]
+        # Create buttons - Channel button removed, Developer contact updated
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("📖 ʜᴇʟᴘ", callback_data="help"),
+                InlineKeyboardButton("🔐 ʟᴏɢɪɴ", callback_data="login_help")
+            ],
+            [
+                InlineKeyboardButton("👨‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ", url="https://t.me/fightermonk110")
+            ]
         ])
         
         await message.reply_text(
-            START_TXT.format(user_mention=message.from_user.mention),
-            reply_markup=start_kb
+            text=START_TXT.format(user_mention=message.from_user.mention),
+            quote=True,
+            reply_markup=keyboard
         )
+        
+        logger.info(f"Start command served to user: {message.from_user.id}")
         
     except Exception as e:
         logger.error(f"Start command error: {e}")
+        await message.reply_text(
+            "❌ **Error starting bot!** Please try again later.\n\n💖 R-TeleSwiftBot💖",
+            quote=True
+        )
 
-@Client.on_message(filters.command("help") & filters.private)
-async def help_message(bot, message):
-    """Handle help command"""
+@Client.on_callback_query()
+async def callback_handler(client, callback_query):
+    """Enhanced callback query handler"""
+    try:
+        data = callback_query.data
+        user_id = callback_query.from_user.id
+        
+        await db.update_last_active(user_id)
+        
+        if data == "help":
+            await callback_query.edit_message_text(
+                HELP_TXT,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🏠 ʙᴀᴄᴋ", callback_data="back_to_start")]
+                ])
+            )
+            
+        elif data == "login_help":
+            login_text = (
+                "🔐 **R-TeleSwiftBot💖 ʟᴏɢɪɴ ɪɴsᴛʀᴜᴄᴛɪᴏɴs**\n\n"
+                "To use this ultra-fast bot, you need to login first:\n\n"
+                "📱 **Steps:**\n"
+                "1. Send `/login` command\n"
+                "2. Enter your phone number with country code\n"
+                "3. Enter OTP received on Telegram\n"
+                "4. If required, enter 2FA password\n\n"
+                "🔒 **Security:** Your session is stored securely\n"
+                "💖 Use `/logout` to remove session anytime"
+            )
+            await callback_query.edit_message_text(
+                login_text,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🏠 ʙᴀᴄᴋ", callback_data="back_to_start")]
+                ])
+            )
+            
+        elif data == "back_to_start":
+            # Create buttons - Channel button removed, Developer contact updated
+            keyboard = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("📖 ʜᴇʟᴘ", callback_data="help"),
+                    InlineKeyboardButton("🔐 ʟᴏɢɪɴ", callback_data="login_help")
+                ],
+                [
+                    InlineKeyboardButton("👨‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ", url="https://t.me/fightermonk110")
+                ]
+            ])
+            
+            await callback_query.edit_message_text(
+                START_TXT.format(user_mention=callback_query.from_user.mention),
+                reply_markup=keyboard
+            )
+        
+        await callback_query.answer()
+        
+    except Exception as e:
+        logger.error(f"Callback query error: {e}")
+        try:
+            await callback_query.answer("❌ Error occurred!", show_alert=True)
+        except:
+            pass
+
+@Client.on_message(filters.command("help") & filters.private & ~filters.forwarded)
+async def help_command(client, message):
+    """Enhanced help command"""
     try:
         await db.update_last_active(message.from_user.id)
         
-        help_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔐 Login", callback_data="login")],
-            [InlineKeyboardButton("🏠 Home", callback_data="start")]
-        ])
-        
         await message.reply_text(
             HELP_TXT,
-            reply_markup=help_kb
+            quote=True,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 ʙᴀᴄᴋ", callback_data="back_to_start")]
+            ])
         )
         
     except Exception as e:
         logger.error(f"Help command error: {e}")
+        await message.reply_text("❌ **Error showing help!** Please try again.")
 
-@Client.on_callback_query()
-async def callback_handler(bot, query):
-    """Handle callback queries"""
+@Client.on_message(filters.text & filters.private & ~filters.forwarded & ~filters.command(['start', 'help', 'login', 'logout', 'cancel']))
+async def handle_message(client, message):
+    """Enhanced message handler for ultra-fast serial batch downloads"""
     try:
-        await query.answer()
-        data = query.data
-        
-        if data == "start":
-            start_kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("💖 Help", callback_data="help"),
-                 InlineKeyboardButton("🔐 Login", callback_data="login")],
-                [InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/fightermonk110")]
-            ])
-            
-            await query.message.edit_text(
-                START_TXT.format(user_mention=query.from_user.mention),
-                reply_markup=start_kb
-            )
-            
-        elif data == "help":
-            help_kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔐 Login", callback_data="login")],
-                [InlineKeyboardButton("🏠 Home", callback_data="start")]
-            ])
-            
-            await query.message.edit_text(
-                HELP_TXT,
-                reply_markup=help_kb
-            )
-            
-        elif data == "login":
-            await query.message.edit_text(
-                "🔐 **Login Process**\n\n"
-                "To login with your Telegram account, send the command:\n\n"
-                "`/login`\n\n"
-                "💖 **R-TeleSwiftBot💖**"
-            )
-            
-    except Exception as e:
-        logger.error(f"Callback handler error: {e}")
-
-@Client.on_message(filters.private & filters.text & ~filters.command(['start', 'help', 'login', 'logout', 'cancel', 'broadcast', 'stats']))
-async def handle_request(bot, message):
-    """Handle download requests with enhanced cancellation support"""
-    try:
-        await db.update_last_active(message.from_user.id)
         user_id = message.from_user.id
+        await db.update_last_active(user_id)
         
-        # Check if user has active process
+        # Check if user has active batch
         if SerialBatchManager.is_active(user_id):
             return await message.reply_text(
-                "⚠️ **You already have an active download process!**\n\n"
+                "⏳ **R-TeleSwiftBot💖 Busy!**\n\n"
+                "🔄 You have an active download in progress.\n"
                 "Please wait for it to complete or use `/cancel` to stop it.\n\n"
-                "💖 **R-TeleSwiftBot💖**"
+                "💡 **Tip:** Use serial batch processing for better speed!\n"
+                "💖 **Ultra High Speed Mode**"
             )
         
-        # Get user session
+        # Validate link
+        link_text = message.text.strip()
+        if not is_valid_telegram_post_link(link_text):
+            return await message.reply_text(ERROR_MESSAGES['invalid_link'])
+        
+        # Check login status
         user_data = await db.get_session(user_id)
         if not user_data:
             return await message.reply_text(ERROR_MESSAGES['not_logged_in'])
         
-        text = message.text.strip()
-        
-        # Validate link
-        if not is_valid_telegram_post_link(text):
+        # Parse the link
+        chat_id, start_msg_id, end_msg_id = parse_telegram_link(link_text)
+        if chat_id is None:
             return await message.reply_text(ERROR_MESSAGES['invalid_link'])
         
-        # Parse link
-        chat_id, start_id, end_id = parse_telegram_link(text)
-        if not chat_id or not start_id:
-            return await message.reply_text(ERROR_MESSAGES['invalid_link'])
-        
-        # Create client
-        try:
-            acc = await create_client_with_retry(user_data)
-        except Exception as e:
-            logger.error(f"Client creation error: {e}")
-            return await message.reply_text(f"❌ **Connection failed:** {str(e)}")
-        
-        try:
-            if end_id:  # Batch download
-                await handle_batch_download(bot, message, acc, chat_id, start_id, end_id, user_id)
-            else:  # Single download
-                await handle_single_download(bot, message, acc, chat_id, start_id, user_id)
-        finally:
-            try:
-                await acc.disconnect()
-            except:
-                pass
-                
+        # Handle single vs batch download
+        if end_msg_id is None:
+            # Single download
+            await handle_single_download(client, message, user_data, chat_id, start_msg_id, link_text)
+        else:
+            # Serial batch download
+            await handle_serial_batch_download(client, message, user_data, chat_id, start_msg_id, end_msg_id, link_text)
+    
     except Exception as e:
-        logger.error(f"Request handler error: {e}")
+        logger.error(f"Message handler error: {e}")
         await message.reply_text(ERROR_MESSAGES['unknown_error'])
 
-async def handle_single_download(bot, message, acc, chat_id, msg_id, user_id):
-    """Handle single message download with cancellation support"""
+async def handle_single_download(client, message, user_data, chat_id, msg_id, original_link):
+    """Handle single message download with proper thumbnail and caption support"""
+    user_id = message.from_user.id
+    acc = None
+    file_path = None
+    thumbnail_path = None
+    
     try:
-        SerialBatchManager.start_batch(user_id, {"type": "single", "total": 1})
+        # Start batch tracking
+        SerialBatchManager.start_batch(user_id, {"type": "single"})
         
-        # Initial status
+        # Create status message
         status_msg = await message.reply_text(
-            "⚡ **R-TeleSwiftBot💖 Starting Download...**\n\n"
-            "🔄 **Fetching message...**\n"
-            "💖 **Ultra High Speed Mode**"
+            "🚀 **R-TeleSwiftBot💖 Initializing...**\n\n"
+            "⚡ **Ultra High Speed Mode Activated**\n"
+            "📥 **Preparing to download...**"
         )
         
         # Store progress message
         SerialBatchManager.set_progress_message(user_id, status_msg)
+        
+        # Create client
+        try:
+            acc = await create_client_with_retry(user_data)
+            await status_msg.edit("✅ **Connected!** Fetching content...")
+        except Exception as e:
+            return await status_msg.edit(f"❌ **Connection failed:** {str(e)[:100]}")
         
         # Check cancellation
         if SerialBatchManager.is_cancelled(user_id):
@@ -589,13 +707,35 @@ async def handle_single_download(bot, message, acc, chat_id, msg_id, user_id):
         
         # Get message
         try:
-            msg = await acc.get_messages(chat_id, msg_id)
-            if not msg or not msg.media:
-                await status_msg.edit("❌ **No media found in this message!**")
-                return
+            target_msg = await acc.get_messages(chat_id, msg_id)
+            if not target_msg:
+                raise Exception("Message not found or inaccessible")
         except Exception as e:
-            await status_msg.edit(f"❌ **Failed to access message:** {str(e)[:100]}")
-            return
+            return await status_msg.edit(ERROR_MESSAGES['access_denied'])
+        
+        # Check if message has media
+        if not (target_msg.video or target_msg.document or target_msg.photo or target_msg.audio or target_msg.voice or target_msg.animation):
+            if target_msg.text:
+                # Text message
+                await status_msg.edit("📝 **Text message found!**")
+                caption = f"📥 **Downloaded via R-TeleSwiftBot💖**\n\n{target_msg.text}"
+                return await client.send_message(user_id, caption[:4096])
+            else:
+                return await status_msg.edit("❌ **No downloadable content found!**")
+        
+        # Check file size
+        file_size = 0
+        if target_msg.video:
+            file_size = target_msg.video.file_size
+        elif target_msg.document:
+            file_size = target_msg.document.file_size
+        elif target_msg.photo:
+            file_size = target_msg.photo.file_size
+        elif target_msg.audio:
+            file_size = target_msg.audio.file_size
+        
+        if file_size > MAX_FILE_SIZE:
+            return await status_msg.edit(ERROR_MESSAGES['file_too_large'])
         
         # Check cancellation before download
         if SerialBatchManager.is_cancelled(user_id):
@@ -606,31 +746,57 @@ async def handle_single_download(bot, message, acc, chat_id, msg_id, user_id):
             )
             return
         
-        # Download file
-        file_path = await ultra_fast_download(acc, msg, status_msg, user_id)
+        # Download thumbnail FIRST - Get thumbnail before downloading main file
+        await status_msg.edit("📎 **Getting thumbnail...**")
+        thumbnail_path = await get_optimized_thumbnail(acc, target_msg)
+        
+        if thumbnail_path:
+            logger.info(f"Thumbnail ready: {thumbnail_path}")
+        else:
+            logger.info("No thumbnail for this media")
+        
+        # Check cancellation after thumbnail
+        if SerialBatchManager.is_cancelled(user_id):
+            if thumbnail_path:
+                await safe_delete_file(thumbnail_path)
+            await status_msg.edit(
+                "🛑 **Your Current Process Terminated Due To User Request ⚠️❌**\n\n"
+                "💖 **R-TeleSwiftBot💖**\n"
+                "Process cancelled successfully!"
+            )
+            return
+        
+        # Download main file
+        await status_msg.edit("⬇️ **R-TeleSwiftBot💖 Downloading...**\n\n💖 **Ultra High Speed Mode**")
+        
+        file_path = await ultra_fast_download(acc, target_msg, status_msg, user_id)
         
         # Check cancellation after download
         if SerialBatchManager.is_cancelled(user_id):
             if file_path:
                 await safe_delete_file(file_path)
+            if thumbnail_path:
+                await safe_delete_file(thumbnail_path)
             return
         
         if not file_path:
+            if thumbnail_path:
+                await safe_delete_file(thumbnail_path)
             await status_msg.edit("❌ **Download failed!**")
             return
         
-        # Upload file
-        await status_msg.edit("⬆️ **Uploading...**")
+        # Generate proper caption
+        caption = get_file_caption(target_msg)
+        
+        # Upload file with thumbnail and caption
+        await status_msg.edit("⬆️ **Uploading with thumbnail...**")
         
         try:
-            # Get thumbnail
-            thumbnail = await get_optimized_thumbnail(acc, msg)
-            
             # Check cancellation before upload
             if SerialBatchManager.is_cancelled(user_id):
                 await safe_delete_file(file_path)
-                if thumbnail:
-                    await safe_delete_file(thumbnail)
+                if thumbnail_path:
+                    await safe_delete_file(thumbnail_path)
                 await status_msg.edit(
                     "🛑 **Your Current Process Terminated Due To User Request ⚠️❌**\n\n"
                     "💖 **R-TeleSwiftBot💖**\n"
@@ -638,39 +804,63 @@ async def handle_single_download(bot, message, acc, chat_id, msg_id, user_id):
                 )
                 return
             
-            # Send file based on type
-            if msg.video:
-                await bot.send_video(
+            # Send file based on type with thumbnail and caption
+            if target_msg.video:
+                await client.send_video(
                     chat_id=user_id,
                     video=file_path,
-                    thumb=thumbnail,
-                    caption="📥 **Downloaded via R-TeleSwiftBot💖**",
+                    thumb=thumbnail_path,
+                    caption=caption,
+                    duration=target_msg.video.duration,
+                    width=target_msg.video.width,
+                    height=target_msg.video.height,
                     progress=progress,
                     progress_args=[status_msg, "up"]
                 )
-            elif msg.document:
-                await bot.send_document(
+            elif target_msg.document:
+                await client.send_document(
                     chat_id=user_id,
                     document=file_path,
-                    thumb=thumbnail,
-                    caption="📥 **Downloaded via R-TeleSwiftBot💖**",
+                    thumb=thumbnail_path,
+                    caption=caption,
+                    file_name=getattr(target_msg.document, 'file_name', None),
                     progress=progress,
                     progress_args=[status_msg, "up"]
                 )
-            elif msg.photo:
-                await bot.send_photo(
+            elif target_msg.photo:
+                await client.send_photo(
                     chat_id=user_id,
                     photo=file_path,
-                    caption="📥 **Downloaded via R-TeleSwiftBot💖**"
+                    caption=caption
                 )
-            elif msg.audio:
-                await bot.send_audio(
+            elif target_msg.audio:
+                await client.send_audio(
                     chat_id=user_id,
                     audio=file_path,
-                    thumb=thumbnail,
-                    caption="📥 **Downloaded via R-TeleSwiftBot💖**",
+                    thumb=thumbnail_path,
+                    caption=caption,
+                    duration=target_msg.audio.duration,
+                    title=getattr(target_msg.audio, 'title', None),
+                    performer=getattr(target_msg.audio, 'performer', None),
                     progress=progress,
                     progress_args=[status_msg, "up"]
+                )
+            elif target_msg.voice:
+                await client.send_voice(
+                    chat_id=user_id,
+                    voice=file_path,
+                    caption=caption,
+                    duration=target_msg.voice.duration
+                )
+            elif target_msg.animation:
+                await client.send_animation(
+                    chat_id=user_id,
+                    animation=file_path,
+                    thumb=thumbnail_path,
+                    caption=caption,
+                    duration=getattr(target_msg.animation, 'duration', 0),
+                    width=getattr(target_msg.animation, 'width', 0),
+                    height=getattr(target_msg.animation, 'height', 0)
                 )
             
             # Check final cancellation
@@ -681,26 +871,40 @@ async def handle_single_download(bot, message, acc, chat_id, msg_id, user_id):
                     "Process cancelled successfully!"
                 )
             else:
-                await status_msg.edit("✅ **Download completed successfully!** 💖")
+                await status_msg.edit("✅ **Download completed successfully with thumbnail!** 💖")
             
-            # Cleanup
-            await safe_delete_file(file_path)
-            if thumbnail:
-                await safe_delete_file(thumbnail)
-                
         except Exception as e:
             logger.error(f"Upload error: {e}")
             await status_msg.edit("❌ **Upload failed!**")
+            
+        # Cleanup files
+        if file_path:
             await safe_delete_file(file_path)
+        if thumbnail_path:
+            await safe_delete_file(thumbnail_path)
             
     except Exception as e:
         logger.error(f"Single download error: {e}")
         await message.reply_text("❌ **Download process failed!**")
+        
+        # Cleanup on error
+        if file_path:
+            await safe_delete_file(file_path)
+        if thumbnail_path:
+            await safe_delete_file(thumbnail_path)
     finally:
         SerialBatchManager.clear_batch(user_id)
+        if acc:
+            try:
+                await acc.disconnect()
+            except:
+                pass
 
-async def handle_batch_download(bot, message, acc, chat_id, start_id, end_id, user_id):
-    """Handle batch download with proper cancellation support"""
+async def handle_serial_batch_download(client, message, user_data, chat_id, start_id, end_id, original_link):
+    """Handle batch download with proper cancellation, thumbnails, and captions"""
+    user_id = message.from_user.id
+    acc = None
+    
     try:
         # Calculate batch info
         total_msgs = end_id - start_id + 1
@@ -726,10 +930,16 @@ async def handle_batch_download(bot, message, acc, chat_id, start_id, end_id, us
         # Store progress message
         SerialBatchManager.set_progress_message(user_id, status_msg)
         
+        # Create client
+        try:
+            acc = await create_client_with_retry(user_data)
+        except Exception as e:
+            return await status_msg.edit(f"❌ **Connection failed:** {str(e)[:100]}")
+        
         successful = 0
         failed = 0
         
-        # Process messages serially
+        # Process messages serially with proper thumbnail and caption handling
         for i, msg_id in enumerate(range(start_id, end_id + 1), 1):
             # Check cancellation
             if SerialBatchManager.is_cancelled(user_id):
@@ -743,90 +953,167 @@ async def handle_batch_download(bot, message, acc, chat_id, start_id, end_id, us
             try:
                 # Update progress
                 progress_text = (
-                    f"⬇️ **R-TeleSwiftBot💖 Batch Processing**\n\n"
-                    f"📊 **Progress:** {i}/{total_msgs} ({(i/total_msgs)*100:.1f}%)\n"
-                    f"📦 **Current Message:** {msg_id}\n"
+                    f"📥 **R-TeleSwiftBot💖 Batch Processing** ({i}/{total_msgs})\n\n"
+                    f"🔄 **Current:** Message {msg_id}\n"
                     f"✅ **Success:** {successful}\n"
                     f"❌ **Failed:** {failed}\n\n"
                     f"💖 **Ultra High Speed Mode**"
                 )
                 await status_msg.edit(progress_text)
                 
-                # Get and process message
-                msg = await acc.get_messages(chat_id, msg_id)
-                if msg and msg.media:
-                    file_path = await ultra_fast_download(acc, msg, status_msg, user_id)
-                    
-                    if SerialBatchManager.is_cancelled(user_id):
-                        if file_path:
-                            await safe_delete_file(file_path)
-                        await status_msg.edit(
-                            "🛑 **Your Current Process Terminated Due To User Request ⚠️❌**\n\n"
-                            "💖 **R-TeleSwiftBot💖**\n"
-                            "Process cancelled successfully!"
-                        )
-                        return
-                    
-                    if file_path:
-                        # Send file
-                        if msg.video:
-                            await bot.send_video(
-                                chat_id=user_id,
-                                video=file_path,
-                                caption=f"📥 **{i}/{total_msgs}** via R-TeleSwiftBot💖"
-                            )
-                        elif msg.document:
-                            await bot.send_document(
-                                chat_id=user_id,
-                                document=file_path,
-                                caption=f"📥 **{i}/{total_msgs}** via R-TeleSwiftBot💖"
-                            )
-                        elif msg.photo:
-                            await bot.send_photo(
-                                chat_id=user_id,
-                                photo=file_path,
-                                caption=f"📥 **{i}/{total_msgs}** via R-TeleSwiftBot💖"
-                            )
-                        elif msg.audio:
-                            await bot.send_audio(
-                                chat_id=user_id,
-                                audio=file_path,
-                                caption=f"📥 **{i}/{total_msgs}** via R-TeleSwiftBot💖"
-                            )
-                        
-                        successful += 1
-                        await safe_delete_file(file_path)
-                    else:
+                # Get message
+                try:
+                    msg = await acc.get_messages(chat_id, msg_id)
+                    if not msg or not msg.media:
                         failed += 1
-                else:
+                        continue
+                except Exception:
                     failed += 1
+                    continue
+                
+                # Check file size
+                file_size = 0
+                if msg.video:
+                    file_size = msg.video.file_size
+                elif msg.document:
+                    file_size = msg.document.file_size
+                elif msg.photo:
+                    file_size = msg.photo.file_size
+                elif msg.audio:
+                    file_size = msg.audio.file_size
+                
+                if file_size > MAX_FILE_SIZE:
+                    failed += 1
+                    continue
+                
+                # Download thumbnail
+                thumbnail_path = await get_optimized_thumbnail(acc, msg)
+                
+                # Check cancellation after thumbnail
+                if SerialBatchManager.is_cancelled(user_id):
+                    if thumbnail_path:
+                        await safe_delete_file(thumbnail_path)
+                    await status_msg.edit(
+                        "🛑 **Your Current Process Terminated Due To User Request ⚠️❌**\n\n"
+                        "💖 **R-TeleSwiftBot💖**\n"
+                        "Process cancelled successfully!"
+                    )
+                    return
+                
+                # Download file
+                file_path = await ultra_fast_download(acc, msg, status_msg, user_id)
+                
+                # Check cancellation after download
+                if SerialBatchManager.is_cancelled(user_id):
+                    if file_path:
+                        await safe_delete_file(file_path)
+                    if thumbnail_path:
+                        await safe_delete_file(thumbnail_path)
+                    return
+                
+                if not file_path:
+                    if thumbnail_path:
+                        await safe_delete_file(thumbnail_path)
+                    failed += 1
+                    continue
+                
+                # Generate caption
+                caption = get_file_caption(msg)
+                
+                # Upload with thumbnail and caption
+                try:
+                    if msg.video:
+                        await client.send_video(
+                            chat_id=user_id,
+                            video=file_path,
+                            thumb=thumbnail_path,
+                            caption=caption,
+                            duration=msg.video.duration,
+                            width=msg.video.width,
+                            height=msg.video.height
+                        )
+                    elif msg.document:
+                        await client.send_document(
+                            chat_id=user_id,
+                            document=file_path,
+                            thumb=thumbnail_path,
+                            caption=caption,
+                            file_name=getattr(msg.document, 'file_name', None)
+                        )
+                    elif msg.photo:
+                        await client.send_photo(
+                            chat_id=user_id,
+                            photo=file_path,
+                            caption=caption
+                        )
+                    elif msg.audio:
+                        await client.send_audio(
+                            chat_id=user_id,
+                            audio=file_path,
+                            thumb=thumbnail_path,
+                            caption=caption,
+                            duration=msg.audio.duration,
+                            title=getattr(msg.audio, 'title', None),
+                            performer=getattr(msg.audio, 'performer', None)
+                        )
+                    elif msg.voice:
+                        await client.send_voice(
+                            chat_id=user_id,
+                            voice=file_path,
+                            caption=caption,
+                            duration=msg.voice.duration
+                        )
+                    elif msg.animation:
+                        await client.send_animation(
+                            chat_id=user_id,
+                            animation=file_path,
+                            thumb=thumbnail_path,
+                            caption=caption,
+                            duration=getattr(msg.animation, 'duration', 0),
+                            width=getattr(msg.animation, 'width', 0),
+                            height=getattr(msg.animation, 'height', 0)
+                        )
                     
+                    successful += 1
+                    
+                except Exception as e:
+                    logger.error(f"Batch upload error: {e}")
+                    failed += 1
+                
+                # Cleanup
+                await safe_delete_file(file_path)
+                if thumbnail_path:
+                    await safe_delete_file(thumbnail_path)
+                
+                # Brief delay between downloads
+                await asyncio.sleep(0.5)
+                
             except Exception as e:
-                logger.error(f"Batch message {msg_id} error: {e}")
+                logger.error(f"Batch process error for msg {msg_id}: {e}")
                 failed += 1
-            
-            # Small delay between downloads
-            await asyncio.sleep(1)
         
         # Final status
         if not SerialBatchManager.is_cancelled(user_id):
-            final_text = (
+            await status_msg.edit(
                 f"✅ **R-TeleSwiftBot💖 Batch Completed!**\n\n"
-                f"📊 **Final Results:**\n"
-                f"📦 **Total Messages:** {total_msgs}\n"
-                f"✅ **Successfully Downloaded:** {successful}\n"
+                f"📊 **Results:**\n"
+                f"✅ **Success:** {successful}\n"
                 f"❌ **Failed:** {failed}\n"
-                f"📈 **Success Rate:** {(successful/total_msgs)*100:.1f}%\n\n"
+                f"📦 **Total:** {total_msgs}\n\n"
                 f"💖 **Ultra High Speed Mode**"
             )
-            await status_msg.edit(final_text)
-            
+        
     except Exception as e:
         logger.error(f"Batch download error: {e}")
         await message.reply_text("❌ **Batch download failed!**")
     finally:
         SerialBatchManager.clear_batch(user_id)
+        if acc:
+            try:
+                await acc.disconnect()
+            except:
+                pass
 
-# Don't Remove Credit Tg - @VJ_Botz
+# Don't Remove Credit Tg - @VJ_Botz  
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
 # Ask Doubt on telegram @KingVJ01
