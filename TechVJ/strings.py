@@ -20,7 +20,7 @@ START_TXT = """<b>ʜᴇʏ {user_mention} 👋,
 💡 ғᴏʀ sᴇʀɪᴀʟ ʙᴀᴛᴄʜ ᴅᴏᴡɴʟᴏᴀᴅ: 
 `https://t.me/channel/100-150`
 
-💖 ᴅᴇᴠᴇʟᴏᴘᴇʀ: @VJ_Botz</b>"""
+💖 ᴅᴇᴠᴇʟᴏᴘᴇʀ: Ashish 😏</b>"""
 
 HELP_TXT = """<b>📖 R-TeleSwiftBot💖 ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅs
 
@@ -49,7 +49,7 @@ HELP_TXT = """<b>📖 R-TeleSwiftBot💖 ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅs
 • ᴇxᴀᴍᴘʟᴇ: `https://t.me/channel/100-150`
 
 💖 R-TeleSwiftBot - ᴜʟᴛʀᴀ ʜɪɢʜ sᴘᴇᴇᴅ ᴍᴏᴅᴇ!
-ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: @VJ_Botz</b>"""
+ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: t.me/fightermonk110</b>"""
 
 # Login help text
 LOGIN_HELP = """<b>🔐 R-TeleSwiftBot💖 ʟᴏɢɪɴ ʜᴇʟᴘ
@@ -68,7 +68,7 @@ LOGIN_HELP = """<b>🔐 R-TeleSwiftBot💖 ʟᴏɢɪɴ ʜᴇʟᴘ
 • ᴜsᴇ /logout ᴛᴏ ʀᴇᴍᴏᴠᴇ sᴇssɪᴏɴ
 
 💖 R-TeleSwiftBot - ᴜʟᴛʀᴀ sᴇᴄᴜʀᴇ!
-ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: @VJ_Botz</b>"""
+ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: t.me/fightermonk110</b>"""
 
 # Error messages dictionary - UPDATED
 ERROR_MESSAGES = {
@@ -153,7 +153,7 @@ Follow @Tech_VJ for updates.""",
     
 An unexpected error happened. Please try again.
 
-If the issue persists, contact: @VJ_Botz
+If the issue persists, contact: t.me/fightermonk110
 
 💖 R-TeleSwiftBot💖"""
 }
