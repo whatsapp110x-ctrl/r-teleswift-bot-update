@@ -9,12 +9,18 @@ import time
 import nest_asyncio
 from datetime import datetime
 
-# FIXED IMPORTS - This will definitely work
-from pyrogram import Client
-from pyrogram.errors import FloodWait, AuthKeyUnregistered, SessionExpired
-
 # Apply nest_asyncio for compatibility
 nest_asyncio.apply()
+
+# FIXED IMPORTS - Import pyrogram components properly
+try:
+    from pyrogram import Client
+    from pyrogram.errors import FloodWait, AuthKeyUnregistered, SessionExpired
+    from pyrogram import filters
+    from pyrogram.types import Message
+except ImportError as e:
+    print(f"❌ Pyrogram import error: {e}")
+    sys.exit(1)
 
 # Configure logging
 logging.basicConfig(
@@ -32,22 +38,26 @@ logging.getLogger("pyrogram.session.session").setLevel(logging.WARNING)
 
 class Bot(Client):
     def __init__(self):
-        # Import config here to avoid issues
-        from config import API_ID, API_HASH, BOT_TOKEN, BOT_WORKERS, SLEEP_THRESHOLD
-        
-        super().__init__(
-            "r_teleswift_bot_24x7",
-            api_id=API_ID,
-            api_hash=API_HASH,
-            bot_token=BOT_TOKEN,
-            plugins=dict(root="TechVJ"),
-            workers=BOT_WORKERS,
-            sleep_threshold=SLEEP_THRESHOLD,
-            max_concurrent_transmissions=20
-        )
-        self.start_time = datetime.utcnow()
-        self.restart_count = 0
-        logger.info("R-TeleSwiftBot💖 24/7 instance created successfully")
+        try:
+            # Import config here to avoid issues
+            from config import API_ID, API_HASH, BOT_TOKEN, BOT_WORKERS, SLEEP_THRESHOLD
+            
+            super().__init__(
+                "r_teleswift_bot_24x7",
+                api_id=API_ID,
+                api_hash=API_HASH,
+                bot_token=BOT_TOKEN,
+                plugins=dict(root="TechVJ"),
+                workers=BOT_WORKERS,
+                sleep_threshold=SLEEP_THRESHOLD,
+                max_concurrent_transmissions=20
+            )
+            self.start_time = datetime.utcnow()
+            self.restart_count = 0
+            logger.info("R-TeleSwiftBot💖 24/7 instance created successfully")
+        except Exception as e:
+            logger.error(f"Bot initialization error: {e}")
+            raise
 
     async def start(self):
         try:
@@ -101,7 +111,7 @@ class Bot(Client):
 async def main():
     """SIMPLIFIED main function that will definitely work"""
     bot = None
-    max_restart_attempts = 50  # Reduced for stability
+    max_restart_attempts = 50
     restart_count = 0
     
     while restart_count < max_restart_attempts:
@@ -138,7 +148,7 @@ async def main():
         except Exception as e:
             logger.error(f"Bot error (attempt {restart_count}): {e}")
             if restart_count < max_restart_attempts:
-                wait_time = min(10, restart_count * 2)  # Shorter wait times
+                wait_time = min(10, restart_count * 2)
                 logger.info(f"Auto-restarting in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)
             continue
