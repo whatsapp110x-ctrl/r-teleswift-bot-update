@@ -279,3 +279,4 @@ if API_ID == 12345 or not API_HASH:
 # Debug info
 if DEBUG_MODE:
     print(f"Config loaded - ADMINS: {ADMINS}, BOT_WORKERS: {BOT_WORKERS}")
+    
