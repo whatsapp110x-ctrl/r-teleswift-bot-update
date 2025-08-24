@@ -1,3 +1,15 @@
+# Don't Remove Credit Tg - @VJ_Botz
+# Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
+# Ask Doubt on telegram @KingVJ01
+
+import logging
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from database.db import db
+from TechVJ.strings import START_TXT
+
+logger = logging.getLogger(__name__)
+
 @Client.on_message(filters.command("start") & filters.private)
 async def start(client, message):
     """Handle start command with updated interface"""
