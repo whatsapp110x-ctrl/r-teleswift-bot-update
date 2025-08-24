@@ -53,30 +53,10 @@ OTP_TIMEOUT = safe_int(os.environ.get("OTP_TIMEOUT", "90"))
 PASSWORD_TIMEOUT = safe_int(os.environ.get("PASSWORD_TIMEOUT", "60"))
 
 # Progress and upload settings
-PROGRESS_UPDATE_INTERVAL = safe_int(os.environ.get("PROGRESS_UPDATE_INTERVAL", "2"))
-PROGRESS_THROTTLE = safe_int(os.environ.get("PROGRESS_THROTTLE", "2"))
+PROGRESS_UPDATE_INTERVAL = safe_int(os.environ.get("PROGRESS_UPDATE_INTERVAL", "3"))
+PROGRESS_THROTTLE = safe_int(os.environ.get("PROGRESS_THROTTLE", "3"))
 DOWNLOAD_CHUNK_SIZE = safe_int(os.environ.get("DOWNLOAD_CHUNK_SIZE", "1024"))
 UPLOAD_CHUNK_SIZE = safe_int(os.environ.get("UPLOAD_CHUNK_SIZE", "1024"))
-
-# Enhanced thumbnail settings
-THUMBNAIL_QUALITY = safe_int(os.environ.get("THUMBNAIL_QUALITY", "95"))  # Higher quality
-THUMBNAIL_MAX_SIZE = safe_int(os.environ.get("THUMBNAIL_MAX_SIZE", "1048576"))  # 1MB limit
-THUMBNAIL_WIDTH = safe_int(os.environ.get("THUMBNAIL_WIDTH", "320"))
-THUMBNAIL_HEIGHT = safe_int(os.environ.get("THUMBNAIL_HEIGHT", "320"))
-ENABLE_THUMBNAIL_CACHE = safe_bool(os.environ.get("ENABLE_THUMBNAIL_CACHE", "True"))
-THUMBNAIL_CACHE_TIME = safe_int(os.environ.get("THUMBNAIL_CACHE_TIME", "3600"))  # 1 hour
-
-# Speed tracking settings
-SPEED_UPDATE_INTERVAL = safe_int(os.environ.get("SPEED_UPDATE_INTERVAL", "1"))  # Update every 1 second
-SPEED_CALCULATION_WINDOW = safe_int(os.environ.get("SPEED_CALCULATION_WINDOW", "5"))  # 5 second window
-ENABLE_REALTIME_SPEED = safe_bool(os.environ.get("ENABLE_REALTIME_SPEED", "True"))
-
-# Enhanced progress settings
-SHOW_PROGRESS_PERCENTAGE = safe_bool(os.environ.get("SHOW_PROGRESS_PERCENTAGE", "True"))
-SHOW_PROGRESS_SPEED = safe_bool(os.environ.get("SHOW_PROGRESS_SPEED", "True"))
-SHOW_PROGRESS_ETA = safe_bool(os.environ.get("SHOW_PROGRESS_ETA", "True"))
-SHOW_PROGRESS_FILENAME = safe_bool(os.environ.get("SHOW_PROGRESS_FILENAME", "True"))
-PROGRESS_MESSAGE_TEMPLATE = os.environ.get("PROGRESS_MESSAGE_TEMPLATE", "enhanced")
 
 # Retry settings - optimized
 MAX_RETRIES = safe_int(os.environ.get("MAX_RETRIES", "2"))
@@ -89,6 +69,10 @@ MAX_CONCURRENT_DOWNLOADS = safe_int(os.environ.get("MAX_CONCURRENT_DOWNLOADS", "
 
 # Session settings
 SESSION_STRING_SIZE = safe_int(os.environ.get("SESSION_STRING_SIZE", "300"))
+
+# Thumbnail settings
+THUMBNAIL_QUALITY = safe_int(os.environ.get("THUMBNAIL_QUALITY", "75"))
+THUMBNAIL_MAX_SIZE = safe_int(os.environ.get("THUMBNAIL_MAX_SIZE", "524288"))
 
 # Error message for restricted content
 ERROR_MESSAGE = os.environ.get("ERROR_MESSAGE", "❌ This content is restricted and cannot be downloaded.")
@@ -105,9 +89,6 @@ if ADMINS_STR:
         ADMINS = []
 else:
     ADMINS = []
-
-# Rest of your existing configuration remains the same...
-# (All other settings from your original config.py)
 
 # Force subscribe channel (optional)
 FORCE_SUB_CHANNEL = os.environ.get("FORCE_SUB_CHANNEL", "")
