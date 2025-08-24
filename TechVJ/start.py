@@ -1,4 +1,3 @@
-# Start command - UPDATED BUTTONS
 @Client.on_message(filters.command("start") & filters.private)
 async def start(client, message):
     """Handle start command with updated interface"""
