@@ -8,7 +8,7 @@ import sys
 import time
 import nest_asyncio
 from datetime import datetime
-from pyrogram.client import Client
+from pyrogram import Client  # FIXED: This was missing
 from pyrogram.errors import FloodWait, AuthKeyUnregistered, SessionExpired
 from config import API_ID, API_HASH, BOT_TOKEN, BOT_WORKERS, SLEEP_THRESHOLD
 
