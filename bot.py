@@ -8,21 +8,14 @@ import sys
 import time
 import nest_asyncio
 from datetime import datetime
+from pyrogram.client import Client
+from pyrogram.errors import FloodWait, AuthKeyUnregistered, SessionExpired
+from config import API_ID, API_HASH, BOT_TOKEN, BOT_WORKERS, SLEEP_THRESHOLD
 
 # Apply nest_asyncio for compatibility
 nest_asyncio.apply()
 
-# FIXED IMPORTS - Import pyrogram components properly
-try:
-    from pyrogram import Client
-    from pyrogram.errors import FloodWait, AuthKeyUnregistered, SessionExpired
-    from pyrogram import filters
-    from pyrogram.types import Message
-except ImportError as e:
-    print(f"❌ Pyrogram import error: {e}")
-    sys.exit(1)
-
-# Configure logging
+# Configure logging with better formatting
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -38,45 +31,29 @@ logging.getLogger("pyrogram.session.session").setLevel(logging.WARNING)
 
 class Bot(Client):
     def __init__(self):
-        try:
-            # Import config here to avoid issues
-            from config import API_ID, API_HASH, BOT_TOKEN, BOT_WORKERS, SLEEP_THRESHOLD
-            
-            super().__init__(
-                "r_teleswift_bot_24x7",
-                api_id=API_ID,
-                api_hash=API_HASH,
-                bot_token=BOT_TOKEN,
-                plugins=dict(root="TechVJ"),
-                workers=BOT_WORKERS,
-                sleep_threshold=SLEEP_THRESHOLD,
-                max_concurrent_transmissions=20
-            )
-            self.start_time = datetime.utcnow()
-            self.restart_count = 0
-            logger.info("R-TeleSwiftBot💖 24/7 instance created successfully")
-        except Exception as e:
-            logger.error(f"Bot initialization error: {e}")
-            raise
+        super().__init__(
+            "r_teleswift_bot",
+            api_id=API_ID,
+            api_hash=API_HASH,
+            bot_token=BOT_TOKEN,
+            plugins=dict(root="TechVJ"),
+            workers=BOT_WORKERS,
+            sleep_threshold=SLEEP_THRESHOLD,
+            max_concurrent_transmissions=15  # Increased for better speed
+        )
+        self.start_time = datetime.utcnow()
+        logger.info("R-TeleSwiftBot💖 instance created successfully")
 
     async def start(self):
         try:
             await super().start()
             bot_info = await self.get_me()
-            self.restart_count += 1
+            logger.info(f"R-TeleSwiftBot💖 Started Successfully! @{bot_info.username}")
+            print(f"🤖 R-TeleSwiftBot💖 Started: @{bot_info.username}")
+            print("💖 Powered By R-TeleSwiftBot")
+            print("🚀 Ultra High Speed Mode Activated")
             
-            logger.info(f"🚀 R-TeleSwiftBot💖 Started Successfully! @{bot_info.username}")
-            logger.info(f"👑 Owner: Ashish 🥵")
-            logger.info(f"🔄 Restart Count: {self.restart_count}")
-            logger.info(f"⏰ Start Time: {self.start_time}")
-            
-            print(f"🤖 R-TeleSwiftBot💖 Online: @{bot_info.username}")
-            print(f"👑 Owner: Ashish 🥵")
-            print(f"💖 24/7 Auto-Restart Mode Activated")
-            print(f"🔄 Restart #: {self.restart_count}")
-            print(f"⚡ Ultra High Speed Mode: ON")
-            
-            # Initialize database in background
+            # Initialize database connection - non-blocking
             asyncio.create_task(self._init_database())
                 
         except Exception as e:
@@ -85,17 +62,17 @@ class Bot(Client):
             raise
 
     async def _init_database(self):
-        """Initialize database in background"""
+        """Initialize database in background to avoid blocking bot startup"""
         try:
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)  # Brief delay to let bot start
             from database.db import db
             db_success = await db.initialize()
             if db_success:
-                logger.info("💾 Database: Connected")
-                print("💾 Database: Connected & Ready")
+                logger.info("Database connection established")
+                print("💾 Database: Connected")
             else:
-                logger.warning("⚠️ Database: Using fallback mode")
-                print("⚠️ Database: Fallback mode active")
+                logger.warning("Database connection failed - using fallback mode")
+                print("⚠️ Database: Using fallback mode")
         except Exception as db_error:
             logger.warning(f"Database initialization warning: {db_error}")
             print(f"⚠️ Database: Fallback mode active")
@@ -103,68 +80,35 @@ class Bot(Client):
     async def stop(self, *args):
         try:
             await super().stop()
-            logger.info("R-TeleSwiftBot💖 stopped - preparing for restart")
-            print("🔄 R-TeleSwiftBot💖 Stopped - Auto-restart in progress...")
+            logger.info("R-TeleSwiftBot💖 stopped successfully")
+            print("👋 R-TeleSwiftBot💖 Stopped - Goodbye!")
         except Exception as e:
             logger.error(f"Error stopping bot: {e}")
 
 async def main():
-    """SIMPLIFIED main function that will definitely work"""
+    """Enhanced main function with better error handling"""
     bot = None
-    max_restart_attempts = 50
-    restart_count = 0
-    
-    while restart_count < max_restart_attempts:
-        try:
-            restart_count += 1
-            logger.info(f"Starting R-TeleSwiftBot💖 (Attempt: {restart_count})")
-            
-            bot = Bot()
-            bot.restart_count = restart_count
-            await bot.start()
-            
-            logger.info("R-TeleSwiftBot💖 is running and ready!")
-            
-            # Simple keep-alive loop
-            while True:
-                try:
-                    await asyncio.sleep(60)  # Check every minute
-                    
-                    # Basic health check
-                    if bot and not bot.is_connected:
-                        logger.warning("Bot disconnected, restarting...")
-                        break
-                        
-                except asyncio.CancelledError:
-                    logger.info("Bot operation cancelled")
-                    break
-                except Exception as health_error:
-                    logger.error(f"Health check error: {health_error}")
-                    break
-            
-        except KeyboardInterrupt:
-            logger.info("R-TeleSwiftBot💖 stopped by user")
-            break
-        except Exception as e:
-            logger.error(f"Bot error (attempt {restart_count}): {e}")
-            if restart_count < max_restart_attempts:
-                wait_time = min(10, restart_count * 2)
-                logger.info(f"Auto-restarting in {wait_time} seconds...")
-                await asyncio.sleep(wait_time)
-            continue
-        finally:
-            if bot:
-                try:
-                    await bot.stop()
-                except Exception as stop_error:
-                    logger.error(f"Error during bot stop: {stop_error}")
+    try:
+        logger.info("Starting R-TeleSwiftBot💖 - Ultra High Speed Edition")
+        bot = Bot()
+        await bot.start()
+        logger.info("R-TeleSwiftBot💖 is running and ready to receive messages")
         
-        # If we exit the inner loop, restart
-        if restart_count < max_restart_attempts:
-            logger.info(f"Restarting R-TeleSwiftBot💖 (Attempt {restart_count + 1})")
-            await asyncio.sleep(3)
-    
-    logger.critical(f"Maximum restart attempts ({max_restart_attempts}) reached. Bot stopping.")
+        # Keep the bot running without excessive operations
+        await asyncio.Event().wait()
+        
+    except KeyboardInterrupt:
+        logger.info("R-TeleSwiftBot💖 stopped by user")
+    except Exception as e:
+        logger.error(f"Bot error: {e}")
+        # Don't re-raise, just log and exit gracefully
+        
+    finally:
+        if bot:
+            try:
+                await bot.stop()
+            except Exception as stop_error:
+                logger.error(f"Error during bot stop: {stop_error}")
 
 if __name__ == "__main__":
     try:
@@ -177,3 +121,4 @@ if __name__ == "__main__":
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
+# Ask Doubt on telegram @KingVJ01
