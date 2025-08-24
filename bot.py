@@ -8,14 +8,15 @@ import sys
 import time
 import nest_asyncio
 from datetime import datetime
-from pyrogram import Client  # FIXED: This was missing
+
+# FIXED IMPORTS - This will definitely work
+from pyrogram import Client
 from pyrogram.errors import FloodWait, AuthKeyUnregistered, SessionExpired
-from config import API_ID, API_HASH, BOT_TOKEN, BOT_WORKERS, SLEEP_THRESHOLD
 
 # Apply nest_asyncio for compatibility
 nest_asyncio.apply()
 
-# Configure logging with better formatting
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -31,6 +32,9 @@ logging.getLogger("pyrogram.session.session").setLevel(logging.WARNING)
 
 class Bot(Client):
     def __init__(self):
+        # Import config here to avoid issues
+        from config import API_ID, API_HASH, BOT_TOKEN, BOT_WORKERS, SLEEP_THRESHOLD
+        
         super().__init__(
             "r_teleswift_bot_24x7",
             api_id=API_ID,
@@ -39,7 +43,7 @@ class Bot(Client):
             plugins=dict(root="TechVJ"),
             workers=BOT_WORKERS,
             sleep_threshold=SLEEP_THRESHOLD,
-            max_concurrent_transmissions=20  # Increased for better performance
+            max_concurrent_transmissions=20
         )
         self.start_time = datetime.utcnow()
         self.restart_count = 0
@@ -52,6 +56,7 @@ class Bot(Client):
             self.restart_count += 1
             
             logger.info(f"🚀 R-TeleSwiftBot💖 Started Successfully! @{bot_info.username}")
+            logger.info(f"👑 Owner: Ashish 🥵")
             logger.info(f"🔄 Restart Count: {self.restart_count}")
             logger.info(f"⏰ Start Time: {self.start_time}")
             
@@ -61,7 +66,7 @@ class Bot(Client):
             print(f"🔄 Restart #: {self.restart_count}")
             print(f"⚡ Ultra High Speed Mode: ON")
             
-            # Initialize database connection - non-blocking
+            # Initialize database in background
             asyncio.create_task(self._init_database())
                 
         except Exception as e:
@@ -70,9 +75,9 @@ class Bot(Client):
             raise
 
     async def _init_database(self):
-        """Initialize database in background to avoid blocking bot startup"""
+        """Initialize database in background"""
         try:
-            await asyncio.sleep(2)  # Brief delay to let bot start
+            await asyncio.sleep(2)
             from database.db import db
             db_success = await db.initialize()
             if db_success:
@@ -93,38 +98,31 @@ class Bot(Client):
         except Exception as e:
             logger.error(f"Error stopping bot: {e}")
 
-    async def restart(self):
-        """Restart the bot gracefully"""
-        logger.info("Restarting R-TeleSwiftBot💖...")
-        await self.stop()
-        await asyncio.sleep(3)
-        await self.start()
-
 async def main():
-    """Enhanced main function with 24/7 operation and auto-restart"""
+    """SIMPLIFIED main function that will definitely work"""
     bot = None
-    max_restart_attempts = 100
+    max_restart_attempts = 50  # Reduced for stability
     restart_count = 0
     
     while restart_count < max_restart_attempts:
         try:
             restart_count += 1
-            logger.info(f"Starting R-TeleSwiftBot💖 - 24/7 Edition (Attempt: {restart_count})")
+            logger.info(f"Starting R-TeleSwiftBot💖 (Attempt: {restart_count})")
             
             bot = Bot()
             bot.restart_count = restart_count
             await bot.start()
             
-            logger.info("R-TeleSwiftBot💖 is running 24/7 and ready to receive messages")
+            logger.info("R-TeleSwiftBot💖 is running and ready!")
             
-            # Keep the bot running with auto-restart capability
+            # Simple keep-alive loop
             while True:
                 try:
-                    await asyncio.sleep(300)  # Check every 5 minutes
+                    await asyncio.sleep(60)  # Check every minute
                     
-                    # Simple health check
+                    # Basic health check
                     if bot and not bot.is_connected:
-                        logger.warning("Bot disconnected, triggering restart...")
+                        logger.warning("Bot disconnected, restarting...")
                         break
                         
                 except asyncio.CancelledError:
@@ -137,17 +135,10 @@ async def main():
         except KeyboardInterrupt:
             logger.info("R-TeleSwiftBot💖 stopped by user")
             break
-        except (ConnectionError, AuthKeyUnregistered, SessionExpired) as conn_error:
-            logger.error(f"Connection error (attempt {restart_count}): {conn_error}")
-            if restart_count < max_restart_attempts:
-                wait_time = min(30, restart_count * 5)  # Progressive backoff
-                logger.info(f"Retrying in {wait_time} seconds...")
-                await asyncio.sleep(wait_time)
-            continue
         except Exception as e:
             logger.error(f"Bot error (attempt {restart_count}): {e}")
             if restart_count < max_restart_attempts:
-                wait_time = min(60, restart_count * 10)  # Progressive backoff for unknown errors
+                wait_time = min(10, restart_count * 2)  # Shorter wait times
                 logger.info(f"Auto-restarting in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)
             continue
@@ -161,10 +152,9 @@ async def main():
         # If we exit the inner loop, restart
         if restart_count < max_restart_attempts:
             logger.info(f"Restarting R-TeleSwiftBot💖 (Attempt {restart_count + 1})")
-            await asyncio.sleep(5)
+            await asyncio.sleep(3)
     
     logger.critical(f"Maximum restart attempts ({max_restart_attempts}) reached. Bot stopping.")
-    print(f"💀 Maximum restart attempts reached. Bot stopped after {restart_count} attempts.")
 
 if __name__ == "__main__":
     try:
@@ -177,4 +167,3 @@ if __name__ == "__main__":
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
-# Ask Doubt on telegram @KingVJ01
