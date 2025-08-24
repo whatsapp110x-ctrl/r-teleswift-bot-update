@@ -29,3 +29,4 @@ pyaes==1.6.1
 pysocks==1.7.1
 yarl==1.9.4
 nest-asyncio==1.5.8
+psutil==5.9.8
