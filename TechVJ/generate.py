@@ -2,7 +2,7 @@
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
 # Ask Doubt on telegram @KingVJ01
 
-import asyncio  # ADDED - This was missing
+import asyncio
 import traceback
 import logging
 from pyrogram.types import Message
@@ -69,7 +69,7 @@ async def main(bot: Client, message: Message):
                 text="📱 **Please send your phone number**\n\n"
                      "Include country code (e.g., +1234567890)\n\n"
                      "Enter `/cancel` to cancel the process",
-                timeout=60  # Reduced from USER_INPUT_TIMEOUT
+                timeout=60
             )
         except TimeoutError:
             return await message.reply_text("⏰ **Login timeout!** Please try `/login` again.")
@@ -115,7 +115,7 @@ async def main(bot: Client, message: Message):
                 "If OTP is `12345`, send it as `1 2 3 4 5` (with spaces)\n\n"
                 "Enter `/cancel` to cancel the process", 
                 filters=filters.text, 
-                timeout=90  # Reduced timeout
+                timeout=90
             )
         except TimeoutError:
             await client.disconnect()
@@ -149,7 +149,7 @@ async def main(bot: Client, message: Message):
                     'Your account has 2FA enabled. Please enter your password.\n\n'
                     'Enter `/cancel` to cancel the process', 
                     filters=filters.text, 
-                    timeout=60  # Reduced timeout
+                    timeout=60
                 )
             except TimeoutError:
                 await client.disconnect()
@@ -208,7 +208,7 @@ async def main(bot: Client, message: Message):
                     logger.error(f"Session save error (attempt {attempt + 1}): {save_error}")
                 
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(1)  # Brief delay between retries
+                    await asyncio.sleep(1)
             
             if not success:
                 return await message.reply_text('❌ **Failed to save session!** Database issue detected. Please try again.')
