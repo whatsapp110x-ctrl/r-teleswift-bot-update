@@ -11,7 +11,8 @@ from pyrogram import filters
 from pyrogram.errors import (
     FloodWait, UserIsBlocked, InputUserDeactivated, AuthKeyUnregistered, 
     SessionExpired, SessionRevoked, ChannelPrivate, UserNotParticipant,
-    PeerIdInvalid, MessageIdInvalid, ChannelInvalid
+    PeerIdInvalid, MessageIdInvalid, ChannelInvalid, UsernameInvalid,
+    UsernameNotOccupied
 )
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message 
 from config import (
@@ -36,6 +37,7 @@ def is_valid_telegram_post_link(text):
         if len(parts) < 5:
             return False
         
+        # Handle different formats
         if parts[3] == 'c' and len(parts) >= 6:
             try:
                 int(parts[4])
@@ -51,12 +53,44 @@ def is_valid_telegram_post_link(text):
                 return False
         else:
             try:
+                # Username format
+                username = parts[3]
                 int(parts[4].split('-')[0])
                 return True
             except (ValueError, IndexError):
                 return False
     except Exception:
         return False
+
+def parse_telegram_link(url):
+    """Parse Telegram link and return chat info and message ID"""
+    try:
+        parts = url.split('/')
+        
+        if parts[3] == 'c':
+            # Private channel: https://t.me/c/123456789/123
+            chat_id = int('-100' + parts[4])
+            msg_part = parts[5]
+        elif parts[3] == 'b':
+            # Bot link: https://t.me/b/123456789_abc/123
+            chat_id = int('-100' + parts[4].split('_')[0])
+            msg_part = parts[5]
+        else:
+            # Public channel/group: https://t.me/username/123
+            chat_id = parts[3]  # Username
+            msg_part = parts[4]
+        
+        # Handle range or single message
+        if '-' in msg_part:
+            start_id, end_id = msg_part.split('-')
+            return chat_id, int(start_id), int(end_id)
+        else:
+            msg_id = int(msg_part)
+            return chat_id, msg_id, None
+            
+    except (ValueError, IndexError) as e:
+        logger.error(f"Error parsing link {url}: {e}")
+        return None, None, None
 
 class SerialBatchManager:
     """Enhanced serial batch download manager with proper cancellation"""
@@ -384,8 +418,6 @@ async def process_media_message(client, message, acc, msg, user_id, is_batch=Fal
                 await status_msg.edit("🛑 **Operation cancelled**")
                 return False
             
-            download_time = time.time() - download_start_time
-            
             # Get thumbnail quickly
             thumbnail = await get_optimized_thumbnail(acc, msg)
             
@@ -399,11 +431,11 @@ async def process_media_message(client, message, acc, msg, user_id, is_batch=Fal
             # PRESERVE ORIGINAL CAPTION - This is the key fix!
             original_caption = msg.caption if msg.caption else ""
             if original_caption:
-                # Keep original caption exactly as it is
-                final_caption = original_caption
+                # Keep original caption exactly as it is, but add success message
+                final_caption = f"{original_caption}\n\n✅ Downloaded successfully via R-TeleSwiftBot💖"
             else:
-                # Only if no original caption, use filename
-                final_caption = f"📎 **{filename}**"
+                # Only if no original caption, use filename with success message
+                final_caption = f"📎 **{filename}**\n\n✅ Downloaded successfully via R-TeleSwiftBot💖"
             
             # Upload with real-time progress
             upload_start_time = time.time()
@@ -442,7 +474,6 @@ async def process_media_message(client, message, acc, msg, user_id, is_batch=Fal
                     progress_args=[status_msg, "up", upload_start_time]
                 )
             
-            # REMOVED THE SUCCESS MESSAGE COMPLETELY AS REQUESTED
             # Just delete the status message silently
             try:
                 await status_msg.delete()
@@ -472,8 +503,8 @@ async def process_media_message(client, message, acc, msg, user_id, is_batch=Fal
         if thumbnail:
             await safe_delete_file(thumbnail)
 
-async def process_single_message(client, message, datas, msgid, is_batch=False, batch_info=None):
-    """Process a single message for download with enhanced error handling"""
+async def process_single_message(client, message, chat_id, msgid, is_batch=False, batch_info=None):
+    """Process a single message for download with FIXED error handling"""
     acc = None
     try:
         user_id = message.from_user.id
@@ -503,18 +534,7 @@ async def process_single_message(client, message, datas, msgid, is_batch=False, 
                     await message.reply_text(f"❌ **Connection error:** `{error_msg[:100]}`")
             return False
         
-        # Determine chat ID
-        try:
-            if "/c/" in str(datas):
-                chat_id = int("-100" + str(datas[4]))
-            else:
-                chat_id = datas[3]
-        except (ValueError, IndexError):
-            if not is_batch:
-                await message.reply_text(ERROR_MESSAGES['invalid_link'])
-            return False
-        
-        # Get the message
+        # Get the message with proper error handling
         try:
             msg = await asyncio.wait_for(
                 acc.get_messages(chat_id, msgid),
@@ -526,12 +546,20 @@ async def process_single_message(client, message, datas, msgid, is_batch=False, 
                     await message.reply_text("❌ **Message not found or access denied**")
                 return False
                 
-        except ChannelPrivate:
+        except (ChannelPrivate, UserNotParticipant):
             if not is_batch:
                 await message.reply_text(ERROR_MESSAGES['access_denied'])
             return False
+        except (UsernameInvalid, UsernameNotOccupied):
+            if not is_batch:
+                await message.reply_text("❌ **Invalid username or channel not found**")
+            return False
+        except PeerIdInvalid:
+            if not is_batch:
+                await message.reply_text("❌ **Invalid chat ID or access denied**")
+            return False
         except Exception as e:
-            logger.error(f"Error getting message: {e}")
+            logger.error(f"Error getting message {msgid} from {chat_id}: {e}")
             if not is_batch:
                 await message.reply_text(f"❌ **Failed to access message:** `{str(e)[:100]}`")
             return False
@@ -633,10 +661,10 @@ async def cancel_command(client, message):
         logger.error(f"Error in cancel command: {e}")
         await message.reply_text("❌ An error occurred while cancelling.")
 
-# Handle Telegram links with FIXED serial batch support
+# Handle Telegram links with FIXED parsing
 @Client.on_message(filters.private & filters.text)
 async def handle_links(client, message):
-    """Handle Telegram post links with TRUE SERIAL batch processing"""
+    """Handle Telegram post links with FIXED link parsing and TRUE SERIAL batch processing"""
     try:
         if message.text.startswith('/'):
             return  # Ignore commands
@@ -659,34 +687,30 @@ async def handle_links(client, message):
         
         await db.update_last_active(user_id)
         
-        # Parse the link
-        datas = text.split("/")
+        # FIXED: Parse the link properly
+        chat_id, start_msg, end_msg = parse_telegram_link(text)
+        
+        if chat_id is None:
+            await message.reply_text("❌ **Invalid link format**")
+            return
         
         # Check for batch download
-        if "-" in datas[-1]:
+        if end_msg is not None:
             # Handle TRUE SERIAL batch download
-            await handle_serial_batch_download(client, message, datas)
+            await handle_serial_batch_download(client, message, chat_id, start_msg, end_msg)
         else:
             # Handle single download
-            try:
-                msgid = int(datas[-1])
-                await process_single_message(client, message, datas, msgid)
-            except ValueError:
-                await message.reply_text("❌ **Invalid message ID in the link**")
+            await process_single_message(client, message, chat_id, start_msg)
         
     except Exception as e:
         logger.error(f"Error handling link: {e}")
         await message.reply_text(f"❌ **Link processing error:** `{str(e)[:100]}`")
 
-async def handle_serial_batch_download(client, message, datas):
+async def handle_serial_batch_download(client, message, chat_id, start_msg, end_msg):
     """TRUE SERIAL batch download - one by one with proper cancellation"""
     user_id = message.from_user.id
     
     try:
-        # Extract range
-        range_part = datas[-1]
-        start_msg, end_msg = map(int, range_part.split("-"))
-        
         total_messages = end_msg - start_msg + 1
         
         if total_messages > MAX_BATCH_SIZE:
@@ -755,14 +779,14 @@ async def handle_serial_batch_download(client, message, datas):
                 
                 # Process message with batch info
                 batch_info = {'current': i, 'total': total_messages}
-                success = await process_single_message(client, message, datas, msg_id, True, batch_info)
+                success = await process_single_message(client, message, chat_id, msg_id, True, batch_info)
                 
                 if success:
                     success_count += 1
                 else:
                     failed_count += 1
                 
-                # Small delay between downloads for true serial processing
+                # Small delay between downloads for serial processing
                 await asyncio.sleep(0.3)
                 
             except Exception as e:
@@ -775,7 +799,7 @@ async def handle_serial_batch_download(client, message, datas):
         avg_speed = total_messages / total_time if total_time > 0 else 0
         
         await batch_status.edit(
-            f"✅ **R-TeleSwiftBot💖 Serial Batch Completed!**\n\n"
+            f"✅ **R-TeleSwiftBot💖 Batch Complete!**\n\n"
             f"📊 **Final Statistics:**\n"
             f"📦 **Total Messages:** `{total_messages}`\n"
             f"✅ **Successful:** `{success_count}`\n"
@@ -784,7 +808,8 @@ async def handle_serial_batch_download(client, message, datas):
             f"⏱️ **Performance:**\n"
             f"🕐 **Total Time:** `{time.strftime('%M:%S', time.gmtime(total_time))}`\n"
             f"⚡ **Average Speed:** `{avg_speed:.1f} msg/s`\n\n"
-            f"💖 **True Serial Processing Complete!**"
+            f"🎉 **Serial batch processing completed!**\n"
+            f"💖 **Powered by R-TeleSwiftBot**"
         )
         
     except Exception as e:
@@ -846,7 +871,9 @@ async def callback_handler(client, callback_query):
                 f"💾 **Smart Features**\n"
                 f"• Original caption preservation\n"
                 f"• Auto cleanup\n"
-                f"• Optimized thumbnails"
+                f"• Optimized thumbnails\n"
+                f"• Space efficient\n\n"
+                f"💖 **R-TeleSwiftBot Ultra High Speed Mode**"
             )
             
             buttons = InlineKeyboardMarkup([
