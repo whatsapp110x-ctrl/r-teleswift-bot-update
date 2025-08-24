@@ -5,17 +5,16 @@
 import asyncio
 import logging
 import re
-import os
 import time
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from pyrogram.errors import FloodWait, ChatAdminRequired, ChannelPrivate, ChatWriteForbidden
+from pyrogram.errors import FloodWait, ChannelPrivate, ChatWriteForbidden, PeerIdInvalid, ChannelInvalid, UsernameNotOccupied
 from database.db import db
 from config import API_ID, API_HASH, MAX_BATCH_SIZE
 
 logger = logging.getLogger(__name__)
 
-# Link pattern for Telegram URLs
+# Improved link patterns
 LINK_PATTERN = re.compile(r'https://t\.me/(?:c/)?([^/]+)/(\d+)(?:-(\d+))?')
 BATCH_PATTERN = re.compile(r'https://t\.me/(?:c/)?([^/]+)/(\d+)-(\d+)')
 
@@ -70,8 +69,37 @@ async def handle_link(client, message: Message):
         logger.error(f"Error handling link: {e}")
         await message.reply_text("❌ **An error occurred!** Please try again later.")
 
+async def resolve_peer(user_client, chat_username):
+    """Resolve peer with better error handling"""
+    try:
+        if chat_username.startswith('c/'):
+            # Private channel with numeric ID
+            chat_id = int('-100' + chat_username[2:])
+        else:
+            # Public username - try to resolve it
+            chat_id = chat_username
+            
+        # Try to get chat info first to resolve the peer
+        try:
+            chat_info = await user_client.get_chat(chat_id)
+            return chat_info.id
+        except PeerIdInvalid:
+            # If peer is invalid, try to search for it
+            if not chat_username.startswith('c/'):
+                # For usernames, try to resolve via username
+                try:
+                    chat_info = await user_client.get_chat(f"@{chat_username}")
+                    return chat_info.id
+                except:
+                    pass
+            raise PeerIdInvalid("Channel not accessible")
+        
+    except Exception as e:
+        logger.error(f"Error resolving peer {chat_username}: {e}")
+        raise
+
 async def handle_single_download(client, message: Message, session: str, link_match):
-    """Handle single post download"""
+    """Handle single post download with improved error handling"""
     try:
         chat_username = link_match.group(1)
         message_id = int(link_match.group(2))
@@ -88,50 +116,61 @@ async def handle_single_download(client, message: Message, session: str, link_ma
         
         try:
             await user_client.connect()
-            await status_msg.edit("🔍 **Fetching content...**")
+            await status_msg.edit("🔍 **Resolving channel...**")
+            
+            # Resolve peer first
+            try:
+                chat_id = await resolve_peer(user_client, chat_username)
+                await status_msg.edit("📥 **Fetching content...**")
+            except PeerIdInvalid:
+                await status_msg.edit(
+                    "❌ **Channel not accessible!**\n\n"
+                    "**Possible reasons:**\n"
+                    "• You haven't joined this channel/group\n"
+                    "• Channel is private and you're not a member\n"
+                    "• Channel doesn't exist or was deleted\n\n"
+                    "**Solution:** Join the channel first, then try again."
+                )
+                return
+            except Exception as e:
+                await status_msg.edit(f"❌ **Error accessing channel:** {str(e)}")
+                return
             
             # Get the message
             try:
-                if chat_username.startswith('c/'):
-                    # Private channel with ID
-                    chat_id = int('-100' + chat_username[2:])
-                else:
-                    # Public username
-                    chat_id = chat_username
-                
                 target_message = await user_client.get_messages(chat_id, message_id)
                 
-                if not target_message:
-                    await status_msg.edit("❌ **Message not found!**")
+                if not target_message or target_message.empty:
+                    await status_msg.edit("❌ **Message not found!** Please check the message ID.")
                     return
                 
                 await status_msg.edit("📤 **Downloading and sending...**")
                 
-                # Forward the message
+                # Copy the message
                 await target_message.copy(
                     chat_id=message.from_user.id,
                     caption=f"✅ **Downloaded Successfully!**\n\n📱 **From:** {chat_username}\n📧 **Message ID:** {message_id}\n\n💖 **Powered by R-TeleSwiftBot**"
                 )
                 
                 await status_msg.edit("✅ **Download completed successfully!**")
+                logger.info(f"Successfully downloaded message {message_id} from {chat_username} for user {message.from_user.id}")
                 
-            except ChannelPrivate:
-                await status_msg.edit("❌ **Channel is private!** You must join the channel first.")
-            except ChatAdminRequired:
-                await status_msg.edit("❌ **Admin rights required!** You don't have permission to access this content.")
             except Exception as e:
                 logger.error(f"Error getting message: {e}")
-                await status_msg.edit("❌ **Failed to access content!** Please check the link and try again.")
+                await status_msg.edit("❌ **Failed to get message!** Message may not exist or be accessible.")
                 
         finally:
-            await user_client.disconnect()
+            try:
+                await user_client.disconnect()
+            except:
+                pass
             
     except Exception as e:
         logger.error(f"Single download error: {e}")
         await message.reply_text("❌ **Download failed!** Please try again.")
 
 async def handle_batch_download(client, message: Message, session: str, batch_match):
-    """Handle batch download"""
+    """Handle batch download with improved error handling"""
     try:
         chat_username = batch_match.group(1)
         start_id = int(batch_match.group(2))
@@ -168,6 +207,19 @@ async def handle_batch_download(client, message: Message, session: str, batch_ma
         try:
             await user_client.connect()
             
+            # Resolve peer first
+            try:
+                chat_id = await resolve_peer(user_client, chat_username)
+            except PeerIdInvalid:
+                await status_msg.edit(
+                    "❌ **Channel not accessible!**\n\n"
+                    "Please join the channel first, then try again."
+                )
+                return
+            except Exception as e:
+                await status_msg.edit(f"❌ **Error accessing channel:** {str(e)}")
+                return
+            
             success_count = 0
             failed_count = 0
             
@@ -186,15 +238,10 @@ async def handle_batch_download(client, message: Message, session: str, batch_ma
                         )
                     
                     # Get the message
-                    if chat_username.startswith('c/'):
-                        chat_id = int('-100' + chat_username[2:])
-                    else:
-                        chat_id = chat_username
-                    
                     target_message = await user_client.get_messages(chat_id, current_id)
                     
                     if target_message and not target_message.empty:
-                        # Forward the message
+                        # Copy the message
                         await target_message.copy(
                             chat_id=message.from_user.id,
                             caption=f"📦 **Batch Download**\n📧 **ID:** {current_id}/{end_id}\n💖 **R-TeleSwiftBot**"
@@ -226,21 +273,11 @@ async def handle_batch_download(client, message: Message, session: str, batch_ma
             )
             
         finally:
-            await user_client.disconnect()
+            try:
+                await user_client.disconnect()
+            except:
+                pass
             
     except Exception as e:
         logger.error(f"Batch download error: {e}")
         await message.reply_text("❌ **Batch download failed!** Please try again.")
-
-@Client.on_message(filters.command("cancel") & filters.private)
-async def cancel_operation(client, message):
-    """Handle cancel command"""
-    try:
-        await message.reply_text(
-            "🛑 **Operation Cancelled**\n\n"
-            "All ongoing operations have been cancelled.\n"
-            "You can start a new download anytime!"
-        )
-    except Exception as e:
-        logger.error(f"Cancel command error: {e}")
-        await message.reply_text("❌ An error occurred.")
