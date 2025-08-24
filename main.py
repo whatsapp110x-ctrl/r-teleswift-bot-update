@@ -11,7 +11,6 @@ import asyncio
 import threading
 import signal
 import time
-import subprocess
 import nest_asyncio
 from datetime import datetime
 
@@ -133,7 +132,6 @@ def monitor_bot():
             logger.info(f"Health check - Bot running for {restart_count} cycles at {current_time}")
             
             # You can add more sophisticated health checks here
-            # For example, checking if bot responds to messages, etc.
             
         except Exception as e:
             logger.error(f"Monitor error: {e}")
